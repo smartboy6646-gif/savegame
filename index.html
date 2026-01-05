@@ -3,60 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poison & Save - Viral Game</title>
+    <title>Poison & Save Multiplayer - Viral</title>
     <style>
-        :root { --primary: #780000; --bg: #fdf0d5; --accent: #669bbc; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        h1 { color: var(--primary); margin: 10px 0; font-size: 24px; }
+        :root { --primary: #780000; --bg: #fdf0d5; --accent: #669bbc; --my-poison: #ff4d4d; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
         
-        #setup-section, #game-section { width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); box-sizing: border-box; }
-        input { width: 80%; padding: 10px; margin: 10px 0; border: 2px solid #ddd; border-radius: 8px; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-
-        .scoreboard { display: flex; justify-content: space-between; background: var(--accent); color: white; padding: 10px; border-radius: 10px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
-        .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #eee; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        #game-container { width: 100%; max-width: 400px; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin-top: 10px; }
+        
+        .scoreboard { display: flex; justify-content: space-between; background: var(--accent); color: white; padding: 12px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; }
+        
+        .status-box { background: #eee; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 15px; font-weight: bold; color: var(--primary); min-height: 25px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        
+        .candy { aspect-ratio: 1/1; font-size: 45px; background: #fff; border: 3px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; position: relative; }
         .candy:active { transform: scale(0.9); }
-        .candy.removed { opacity: 0.1; cursor: default; pointer-events: none; }
-        .status { font-weight: bold; color: var(--primary); margin: 10px 0; min-height: 40px; }
+        
+        /* Tapai ko screen ma matra dekhine RED mark */
+        .my-poison-mark { border: 4px solid var(--my-poison) !important; background: #ffebeb; }
+        
+        .removed { opacity: 0; pointer-events: none; transition: 0.3s; }
+        
+        .setup-screen { text-align: center; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        input { width: 90%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; font-size: 16px; cursor: pointer; }
+        
         .hidden { display: none; }
-        .round-info { font-size: 14px; color: #555; }
+        .turn-indicator { border: 3px solid gold; box-shadow: 0 0 10px gold; }
     </style>
 </head>
 <body>
 
-    <h1>🍫 Poison & Save</h1>
-
-    <div id="setup-section">
+    <div id="setup-section" class="setup-screen">
+        <h2>🍫 Poison Challenge</h2>
+        <p>Multiplayer Viral Game</p>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <input type="text" id="roomInput" placeholder="Room Name (e.g. viral100)">
-        <button onclick="joinGame()">Khel Suru Garnuhos</button>
+        <input type="text" id="roomInput" placeholder="Room ID (e.g. viral77)">
+        <button class="btn" onclick="joinGame()">KHELMA JOIN HUNUOS</button>
     </div>
 
     <div id="game-section" class="hidden">
-        <div class="scoreboard">
-            <div id="p1-display">P1: 0</div>
-            <div class="round-info" id="round-display">Round: 1/11</div>
-            <div id="p2-display">P2: 0</div>
+        <div id="game-container">
+            <div class="scoreboard">
+                <div id="p1-info">P1: 0</div>
+                <div id="round-info">Round: 1/11</div>
+                <div id="p2-info">P2: 0</div>
+            </div>
+
+            <div class="status-box" id="status-text">Connecting...</div>
+
+            <div id="grid" class="grid">
+                </div>
         </div>
-        <div class="status" id="status">Connecting...</div>
-        <div id="grid" class="grid"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // *** YAHA AFNO FIREBASE CONFIG HALNUHOS ***
+        // *** FIREBASE CONFIG YAHA HALNUHOS ***
         const firebaseConfig = {
-             apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
+           apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
   authDomain: "poison-and-save.firebaseapp.com",
   projectId: "poison-and-save",
   storageBucket: "poison-and-save.firebasestorage.app",
   messagingSenderId: "475847800468",
   appId: "1:475847800468:web:93605c30c6c6c775e2a681",
   measurementId: "G-VR6WKKB1DV"
-
         };
 
         const app = initializeApp(firebaseConfig);
@@ -64,16 +77,21 @@
         let roomID, myRole, myName, gameData = {};
 
         window.joinGame = () => {
-            roomID = document.getElementById('roomInput').value;
-            myName = document.getElementById('playerName').value;
-            if(!roomID || !myName) return alert("Naam ra Room Name halnuhos!");
+            roomID = document.getElementById('roomInput').value.trim();
+            myName = document.getElementById('playerName').value.trim();
+            if(!roomID || !myName) return alert("Sabhai detail bharnuhos!");
 
             const roomRef = ref(db, 'rooms/' + roomID);
+
             onValue(roomRef, (snapshot) => {
                 const data = snapshot.val();
                 if (!data) {
                     myRole = "p1";
-                    set(roomRef, { turn: "p1", state: "selecting", p1_name: myName, p1_score: 0, p2_score: 0, round: 1 });
+                    set(roomRef, { 
+                        state: "selecting", turn: "p1", round: 1,
+                        p1_name: myName, p1_score: 0, p2_score: 0,
+                        p1_joined: true
+                    });
                 } else if (!myRole) {
                     myRole = "p2";
                     update(roomRef, { p2_name: myName, p2_joined: true });
@@ -93,7 +111,7 @@
             for (let i = 0; i < 12; i++) {
                 let div = document.createElement('div');
                 div.className = 'candy';
-                div.id = "candy-" + i;
+                div.id = `candy-${i}`;
                 div.innerHTML = "🍫";
                 div.onclick = () => handleClick(i);
                 grid.appendChild(div);
@@ -102,76 +120,88 @@
 
         function handleClick(index) {
             const roomRef = ref(db, 'rooms/' + roomID);
+
+            // 1. Poison Selection Phase
             if (gameData.state === "selecting") {
                 if (myRole === "p1" && gameData.p1_poison === undefined) {
                     update(roomRef, { p1_poison: index });
                 } else if (myRole === "p2" && gameData.p2_poison === undefined) {
                     update(roomRef, { p2_poison: index });
                 }
-                checkStart();
+                
+                // Dubai le chhani sake pachi khel suru hunchha
+                // Note: Logic syncs on next data update
             } 
+            // 2. Playing Phase
             else if (gameData.state === "playing" && gameData.turn === myRole) {
-                const opponentPoison = myRole === "p1" ? gameData.p2_poison : gameData.p1_poison;
-                if (index === opponentPoison) {
-                    handleRoundEnd();
+                if (gameData[`rem_${index}`]) return; // Pahilei remove bhayeko
+
+                const oppPoison = (myRole === "p1") ? gameData.p2_poison : gameData.p1_poison;
+                
+                if (index === oppPoison) {
+                    startNextRound(myRole === "p1" ? "p2" : "p1");
                 } else {
                     update(roomRef, { 
-                        turn: myRole === "p1" ? "p2" : "p1",
-                        [`removed_${index}`]: true 
+                        turn: (myRole === "p1" ? "p2" : "p1"),
+                        [`rem_${index}`]: true 
                     });
                 }
             }
         }
 
-        function checkStart() {
-            if (gameData.p1_poison !== undefined && gameData.p2_poison !== undefined) {
-                update(ref(db, 'rooms/' + roomID), { state: "playing" });
-            }
-        }
-
-        function handleRoundEnd() {
+        function startNextRound(winner) {
             const roomRef = ref(db, 'rooms/' + roomID);
-            const winner = myRole === "p1" ? "p2" : "p1";
+            const nextR = (gameData.round || 1) + 1;
             const newScore = (gameData[winner + "_score"] || 0) + 1;
-            const nextRound = (gameData.round || 1) + 1;
 
-            if (nextRound > 11) {
-                alert("Game Over! Final Winner: " + (gameData.p1_score > gameData.p2_score ? gameData.p1_name : gameData.p2_name));
+            if (nextR > 11) {
+                alert(`Game Over! Winner: ${gameData[winner + "_name"]}`);
                 set(roomRef, null);
                 location.reload();
             } else {
-                alert("You hit the poison! Next Round starting...");
-                // Reset for next round
-                let resetData = {
-                    state: "selecting",
-                    turn: "p1",
-                    round: nextRound,
+                alert("Boom! You hit the poison! Round Resetting...");
+                let reset = {
+                    state: "selecting", turn: "p1", round: nextR,
+                    p1_poison: null, p2_poison: null,
                     [winner + "_score"]: newScore
                 };
-                // Clear old round data
-                for(let i=0; i<12; i++) resetData[`removed_${i}`] = null;
-                resetData[`p1_poison`] = null;
-                resetData[`p2_poison`] = null;
-                update(roomRef, resetData);
+                for(let i=0; i<12; i++) reset[`rem_${i}`] = null;
+                update(roomRef, reset);
             }
         }
 
         function renderUI() {
-            const status = document.getElementById('status');
-            document.getElementById('p1-display').innerText = (gameData.p1_name || "P1") + ": " + (gameData.p1_score || 0);
-            document.getElementById('p2-display').innerText = (gameData.p2_name || "P2") + ": " + (gameData.p2_score || 0);
-            document.getElementById('round-display').innerText = "Round: " + (gameData.round || 1) + "/11";
+            if (!gameData.state) return;
 
+            // Update Scoreboard
+            document.getElementById('p1-info').innerText = `${gameData.p1_name || 'P1'}: ${gameData.p1_score}`;
+            document.getElementById('p2-info').innerText = `${gameData.p2_name || 'P2'}: ${gameData.p2_score}`;
+            document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
+
+            const statusText = document.getElementById('status-text');
+            const myPoison = (myRole === "p1") ? gameData.p1_poison : gameData.p2_poison;
+
+            // Auto-start game if both selected
+            if (gameData.state === "selecting" && gameData.p1_poison !== undefined && gameData.p2_poison !== undefined) {
+                update(ref(db, 'rooms/' + roomID), { state: "playing" });
+            }
+
+            // Render Grid Updates
+            for (let i = 0; i < 12; i++) {
+                const el = document.getElementById(`candy-${i}`);
+                if (gameData[`rem_${i}`]) el.classList.add('removed');
+                else el.classList.remove('removed');
+
+                // Aafu le rojeko poison ma RED mark lagaune
+                if (myPoison === i) el.classList.add('my-poison-mark');
+                else el.classList.remove('my-poison-mark');
+            }
+
+            // Update Status Messages
             if (gameData.state === "selecting") {
-                const chosen = (myRole === "p1" ? gameData.p1_poison : gameData.p2_poison) !== undefined;
-                status.innerText = chosen ? "Waiting for opponent..." : "Pick your SECRET Poison!";
+                statusText.innerText = (myPoison === undefined) ? "Select your SECRET Poison!" : "Waiting for opponent...";
             } else if (gameData.state === "playing") {
-                status.innerText = gameData.turn === myRole ? "YOUR TURN!" : "Opponent is thinking...";
-                for (let i = 0; i < 12; i++) {
-                    const el = document.getElementById("candy-" + i);
-                    if (gameData[`removed_${i}`]) el.classList.add('removed');
-                    else el.classList.remove('removed');
-                }
+                statusText.innerText = (gameData.turn === myRole) ? "YOUR TURN! Pick safe 🍫" : "Opponent's Turn...";
             }
         }
     </script>
