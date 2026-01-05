@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Poison or Save</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>☠️ Poison or Save ❤️</h1>
+
+<div id="menu">
+  <input id="playerName" placeholder="Your Name">
+  <input id="roomId" placeholder="Room Code (join only)">
+  <button onclick="createRoom()">Create Room</button>
+  <button onclick="joinRoom()">Join Room</button>
+</div>
+
+<div id="game" style="display:none;">
+  <h2 id="roomTitle"></h2>
+  <p id="players"></p>
+
+  <p id="timer">⏱️</p>
+
+  <div id="choices">
+    <button class="poison" onclick="choose('poison')">☠️ Poison</button>
+    <button class="save" onclick="choose('save')">❤️ Save</button>
+  </div>
+
+  <div id="result"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
