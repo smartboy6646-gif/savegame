@@ -2,59 +2,67 @@
 <html lang="ne">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poison & Save: Hard Mode</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Poison & Save: Ultimate Viral</title>
     <style>
-        :root { --primary: #780000; --bg: #fdf0d5; --accent: #003049; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        
-        #game-container { width: 100%; max-width: 400px; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin-top: 10px; position: relative; overflow: hidden; }
-        
-        .scoreboard { display: flex; justify-content: space-between; background: var(--accent); color: white; padding: 12px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; font-size: 13px; }
-        
-        .status-box { background: #f8f9fa; padding: 12px; border-radius: 10px; text-align: center; margin-bottom: 15px; font-weight: bold; color: var(--primary); border: 1px solid #eee; }
-        
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .candy { aspect-ratio: 1/1; font-size: 45px; background: #fff; border: 3px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
-        .removed { opacity: 0; pointer-events: none; transition: 0.4s; transform: scale(0.5); }
-        
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 500; text-align: center; }
-        #round-winner-overlay { background: rgba(0, 48, 73, 0.95); color: white; }
-        #final-winner-overlay { background: var(--primary); color: white; }
-        
-        .win-title { font-size: 50px; margin: 0; }
-        .win-name { font-size: 28px; font-weight: bold; color: gold; margin: 10px 0; }
+        :root { --primary: #780000; --bg: #fdf0d5; --accent: #003049; --gold: #fcbf49; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: manipulation; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
 
-        .setup-screen { text-align: center; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 320px; }
-        input { width: 90%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+        #game-container { width: 100%; max-width: 380px; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; }
+        .scoreboard { display: flex; justify-content: space-between; background: var(--accent); color: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; font-weight: bold; font-size: 12px; }
+        .status-box { background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 15px; font-weight: bold; color: var(--primary); border: 1px solid #eee; font-size: 14px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.1s; }
+        .candy:active { transform: scale(0.9); }
+        .removed { visibility: hidden; opacity: 0; transition: 0.4s; }
+
+        /* Reaction Buttons */
+        .reaction-bar { display: flex; justify-content: center; gap: 15px; margin-top: 15px; }
+        .react-btn { font-size: 24px; cursor: pointer; filter: grayscale(0.5); transition: 0.2s; }
+        .react-btn:active { transform: scale(1.3); filter: grayscale(0); }
+
+        /* Floating Emoji Animation */
+        .floating-emoji { position: absolute; font-size: 50px; z-index: 1000; animation: floatUp 1.5s ease-out forwards; pointer-events: none; }
+        @keyframes floatUp { 0% { bottom: 50px; opacity: 1; transform: translateX(0); } 100% { bottom: 300px; opacity: 0; transform: translateX(30px) rotate(20deg); } }
+
+        /* Overlays */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 500; text-align: center; border-radius: 20px; }
+        #round-overlay { background: rgba(0, 48, 73, 0.95); color: white; border: 4px solid var(--gold); }
+        #final-overlay { background: var(--primary); color: white; }
+        
+        .setup-screen { text-align: center; background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 320px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; text-align: center; }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; font-size: 16px; }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="setup-section" class="setup-screen">
-        <h2 style="color:var(--primary)">🍫 Poison & Save</h2>
-        <p style="font-size:12px">Hard Mode: No Highlights!</p>
+        <h2 style="color:var(--primary); margin-bottom: 5px;">🍫 Poison & Save</h2>
+        <p style="font-size:12px; color:#666; margin-top:0;">Mobile Friendly Multiplayer</p>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <input type="text" id="roomInput" placeholder="Room ID">
-        <button class="btn" onclick="joinGame()">KHELMA JOIN HUNUOS</button>
+        <input type="text" id="roomInput" placeholder="Room ID (nepal1)">
+        <button class="btn" onclick="joinGame()">KHEL SURU GARNOS</button>
     </div>
 
     <div id="game-section" class="hidden">
         <div id="game-container">
-            
-            <div id="round-winner-overlay" class="overlay hidden">
-                <h2 style="color: gold;">ROUND OVER!</h2>
-                <div class="win-name" id="round-winner-text">PLAYER NAME</div>
-                <p id="win-reason">Hit the poison!</p>
+            <div id="emoji-container"></div>
+
+            <div id="round-overlay" class="overlay hidden">
+                <h1 style="font-size: 60px; margin:0;">🏆</h1>
+                <div id="round-winner-text" style="font-size: 24px; font-weight: bold; color: var(--gold); padding: 20px;">Round Over! Player Win</div>
+                <p>Naya round suru hudai chha...</p>
             </div>
 
-            <div id="final-winner-overlay" class="overlay hidden">
-                <h1 class="win-title">🏆</h1>
-                <p>ULTIMATE CHAMPION</p>
-                <div class="win-name" id="final-winner-text">PLAYER NAME</div>
-                <button class="btn" style="width:180px; background:white; color:var(--primary)" onclick="exitRoom()">CLOSE</button>
+            <div id="final-overlay" class="overlay hidden">
+                <h1 style="font-size: 70px; margin:0;">👑</h1>
+                <p>FINAL CHAMPION</p>
+                <div id="final-winner-text" style="font-size: 32px; font-weight: bold; color: var(--gold);">PLAYER</div>
+                <button class="btn" style="width:150px; background:white; color:var(--primary); margin-top:20px;" onclick="exitRoom()">CLOSE</button>
             </div>
 
             <div class="scoreboard">
@@ -63,9 +71,17 @@
                 <div id="p2-info">P2: 0</div>
             </div>
 
-            <div class="status-box" id="status-text">Wait...</div>
+            <div class="status-box" id="status-text">Connecting...</div>
             <div id="grid" class="grid"></div>
-            <center><button class="btn" style="margin-top:15px; width:auto; font-size:10px; padding:5px 10px; background:#888" onclick="exitRoom()">EXIT ROOM</button></center>
+
+            <div class="reaction-bar">
+                <span class="react-btn" onclick="sendEmoji('😂')">😂</span>
+                <span class="react-btn" onclick="sendEmoji('💀')">💀</span>
+                <span class="react-btn" onclick="sendEmoji('😡')">😡</span>
+                <span class="react-btn" onclick="sendEmoji('😎')">😎</span>
+            </div>
+            
+            <center><button style="background:none; border:none; color:#888; font-size:11px; margin-top:10px;" onclick="exitRoom()">EXIT ROOM</button></center>
         </div>
     </div>
 
@@ -73,9 +89,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // *** CONFIG YAHA HALNUHOS ***
+        // *** CONFIG HALNOS ***
         const firebaseConfig = {
-           apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
+            apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
   authDomain: "poison-and-save.firebaseapp.com",
   projectId: "poison-and-save",
   storageBucket: "poison-and-save.firebasestorage.app",
@@ -91,7 +107,7 @@
         window.joinGame = () => {
             roomID = document.getElementById('roomInput').value.trim().toLowerCase();
             myName = document.getElementById('playerName').value.trim();
-            if(!roomID || !myName) return alert("Details bharnuhos!");
+            if(!roomID || !myName) return alert("Sabhai bharnuhos!");
 
             const roomRef = ref(db, 'rooms/' + roomID);
             onValue(roomRef, (snapshot) => {
@@ -100,7 +116,7 @@
 
                 if (!data) {
                     myRole = "p1";
-                    set(roomRef, { state: "selecting", turn: "p1", round: 1, p1_name: myName, p1_score: 0, p2_score: 0, p1_joined: true });
+                    set(roomRef, { state: "selecting", turn: "p1", round: 1, p1_name: myName, p1_score: 0, p2_score: 0, p1_joined: true, winnerName: "" });
                 } else if (!myRole) {
                     myRole = "p2";
                     update(roomRef, { p2_name: myName, p2_joined: true });
@@ -115,13 +131,10 @@
         };
 
         function createGrid() {
-            const grid = document.getElementById('grid');
-            grid.innerHTML = "";
+            const grid = document.getElementById('grid'); grid.innerHTML = "";
             for (let i = 0; i < 12; i++) {
                 let div = document.createElement('div');
-                div.className = 'candy';
-                div.id = `candy-${i}`;
-                div.innerHTML = "🍫";
+                div.className = 'candy'; div.id = `candy-${i}`; div.innerHTML = "🍫";
                 div.onclick = () => handleClick(i);
                 grid.appendChild(div);
             }
@@ -135,15 +148,8 @@
             } 
             else if (gameData.state === "playing" && gameData.turn === myRole) {
                 if (gameData[`rem_${index}`]) return;
-                
-                // Naya Logic: Dubai ko poison check garne
-                const p1Poison = gameData.p1_poison;
-                const p2Poison = gameData.p2_poison;
-                
-                if (index === p1Poison || index === p2Poison) {
-                    // Jasle click garyo, u haryo! Round Winner arko player hunchha.
-                    const roundWinnerRole = (myRole === "p1") ? "p2" : "p1";
-                    handleVictory(roundWinnerRole);
+                if (index === gameData.p1_poison || index === gameData.p2_poison) {
+                    handleVictory(myRole === "p1" ? "p2" : "p1");
                 } else {
                     update(roomRef, { turn: (myRole === "p1" ? "p2" : "p1"), [`rem_${index}`]: true });
                 }
@@ -152,27 +158,27 @@
 
         function handleVictory(winnerRole) {
             const roomRef = ref(db, 'rooms/' + roomID);
-            const winnerName = gameData[winnerRole + "_name"];
             const nextR = (gameData.round || 1) + 1;
             const newScore = (gameData[winnerRole + "_score"] || 0) + 1;
+            const winnerName = gameData[winnerRole + "_name"];
 
+            if (navigator.vibrate) navigator.vibrate(300);
             update(roomRef, { state: "round_ended", last_round_winner: winnerName });
 
             setTimeout(() => {
                 if (nextR > 11) {
                     update(roomRef, { state: "final_ended", final_winner: winnerName, [winnerRole + "_score"]: newScore });
                 } else {
-                    let reset = { 
-                        state: "selecting", turn: "p1", round: nextR, 
-                        p1_poison: null, p2_poison: null, 
-                        [winnerRole + "_score"]: newScore,
-                        last_round_winner: "" 
-                    };
+                    let reset = { state: "selecting", turn: "p1", round: nextR, p1_poison: null, p2_poison: null, [winnerRole + "_score"]: newScore, last_round_winner: "" };
                     for(let i=0; i<12; i++) reset[`rem_${i}`] = null;
                     update(roomRef, reset);
                 }
             }, 2500);
         }
+
+        window.sendEmoji = (emoji) => {
+            update(ref(db, 'rooms/' + roomID), { reaction: emoji, react_time: Date.now() });
+        };
 
         window.exitRoom = () => { remove(ref(db, 'rooms/' + roomID)).then(() => location.reload()); };
 
@@ -182,18 +188,23 @@
             document.getElementById('p2-info').innerText = `${gameData.p2_name || 'P2'}: ${gameData.p2_score}`;
             document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
 
-            const statusText = document.getElementById('status-text');
-            const roundOverlay = document.getElementById('round-winner-overlay');
-            const finalOverlay = document.getElementById('final-winner-overlay');
+            // Reaction Emoji Display
+            if (gameData.reaction && Date.now() - gameData.react_time < 2000) {
+                const container = document.getElementById('emoji-container');
+                if (container.childElementCount === 0) {
+                    const el = document.createElement('div'); el.className = 'floating-emoji';
+                    el.innerText = gameData.reaction; container.appendChild(el);
+                    setTimeout(() => el.remove(), 1500);
+                }
+            }
 
-            // Winner Overlays
             if (gameData.state === "round_ended") {
-                roundOverlay.classList.remove('hidden');
-                document.getElementById('round-winner-text').innerText = gameData.last_round_winner + " WON!";
-            } else { roundOverlay.classList.add('hidden'); }
+                document.getElementById('round-overlay').classList.remove('hidden');
+                document.getElementById('round-winner-text').innerText = "Round Over! " + gameData.last_round_winner + " Win";
+            } else { document.getElementById('round-overlay').classList.add('hidden'); }
 
             if (gameData.state === "final_ended") {
-                finalOverlay.classList.remove('hidden');
+                document.getElementById('final-overlay').classList.remove('hidden');
                 document.getElementById('final-winner-text').innerText = gameData.final_winner;
             }
 
@@ -207,11 +218,12 @@
                 else el.classList.remove('removed');
             }
 
+            const statusText = document.getElementById('status-text');
             if (gameData.state === "selecting") {
                 const myPoisoned = (myRole === "p1" ? gameData.p1_poison : gameData.p2_poison) !== undefined;
                 statusText.innerText = (!myPoisoned) ? "SET YOUR POISON 💀" : "WAITING FOR OPPONENT...";
             } else if (gameData.state === "playing") {
-                statusText.innerText = (gameData.turn === myRole) ? "👉 YOUR TURN!" : "OPPONENT'S TURN...";
+                statusText.innerText = (gameData.turn === myRole) ? "👉 YOUR TURN!" : "WAITING...";
             }
         }
     </script>
