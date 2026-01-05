@@ -3,65 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poison & Save Multiplayer - Viral</title>
+    <title>Poison & Save: Hard Mode</title>
     <style>
-        :root { --primary: #780000; --bg: #fdf0d5; --accent: #669bbc; --my-poison: #ff4d4d; }
+        :root { --primary: #780000; --bg: #fdf0d5; --accent: #003049; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
         
-        #game-container { width: 100%; max-width: 400px; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin-top: 10px; }
+        #game-container { width: 100%; max-width: 400px; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin-top: 10px; position: relative; overflow: hidden; }
         
-        .scoreboard { display: flex; justify-content: space-between; background: var(--accent); color: white; padding: 12px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; }
+        .scoreboard { display: flex; justify-content: space-between; background: var(--accent); color: white; padding: 12px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; font-size: 13px; }
         
-        .status-box { background: #eee; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 15px; font-weight: bold; color: var(--primary); min-height: 25px; }
+        .status-box { background: #f8f9fa; padding: 12px; border-radius: 10px; text-align: center; margin-bottom: 15px; font-weight: bold; color: var(--primary); border: 1px solid #eee; }
         
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .candy { aspect-ratio: 1/1; font-size: 45px; background: #fff; border: 3px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .removed { opacity: 0; pointer-events: none; transition: 0.4s; transform: scale(0.5); }
         
-        .candy { aspect-ratio: 1/1; font-size: 45px; background: #fff; border: 3px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; position: relative; }
-        .candy:active { transform: scale(0.9); }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 500; text-align: center; }
+        #round-winner-overlay { background: rgba(0, 48, 73, 0.95); color: white; }
+        #final-winner-overlay { background: var(--primary); color: white; }
         
-        /* Tapai ko screen ma matra dekhine RED mark */
-        .my-poison-mark { border: 4px solid var(--my-poison) !important; background: #ffebeb; }
-        
-        .removed { opacity: 0; pointer-events: none; transition: 0.3s; }
-        
-        .setup-screen { text-align: center; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        input { width: 90%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; font-size: 16px; cursor: pointer; }
-        
-        .hidden { display: none; }
-        .turn-indicator { border: 3px solid gold; box-shadow: 0 0 10px gold; }
+        .win-title { font-size: 50px; margin: 0; }
+        .win-name { font-size: 28px; font-weight: bold; color: gold; margin: 10px 0; }
+
+        .setup-screen { text-align: center; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 320px; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 10px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="setup-section" class="setup-screen">
-        <h2>🍫 Poison Challenge</h2>
-        <p>Multiplayer Viral Game</p>
+        <h2 style="color:var(--primary)">🍫 Poison & Save</h2>
+        <p style="font-size:12px">Hard Mode: No Highlights!</p>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <input type="text" id="roomInput" placeholder="Room ID (e.g. viral77)">
+        <input type="text" id="roomInput" placeholder="Room ID">
         <button class="btn" onclick="joinGame()">KHELMA JOIN HUNUOS</button>
     </div>
 
     <div id="game-section" class="hidden">
         <div id="game-container">
+            
+            <div id="round-winner-overlay" class="overlay hidden">
+                <h2 style="color: gold;">ROUND OVER!</h2>
+                <div class="win-name" id="round-winner-text">PLAYER NAME</div>
+                <p id="win-reason">Hit the poison!</p>
+            </div>
+
+            <div id="final-winner-overlay" class="overlay hidden">
+                <h1 class="win-title">🏆</h1>
+                <p>ULTIMATE CHAMPION</p>
+                <div class="win-name" id="final-winner-text">PLAYER NAME</div>
+                <button class="btn" style="width:180px; background:white; color:var(--primary)" onclick="exitRoom()">CLOSE</button>
+            </div>
+
             <div class="scoreboard">
                 <div id="p1-info">P1: 0</div>
                 <div id="round-info">Round: 1/11</div>
                 <div id="p2-info">P2: 0</div>
             </div>
 
-            <div class="status-box" id="status-text">Connecting...</div>
-
-            <div id="grid" class="grid">
-                </div>
+            <div class="status-box" id="status-text">Wait...</div>
+            <div id="grid" class="grid"></div>
+            <center><button class="btn" style="margin-top:15px; width:auto; font-size:10px; padding:5px 10px; background:#888" onclick="exitRoom()">EXIT ROOM</button></center>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // *** FIREBASE CONFIG YAHA HALNUHOS ***
+        // *** CONFIG YAHA HALNUHOS ***
         const firebaseConfig = {
            apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
   authDomain: "poison-and-save.firebaseapp.com",
@@ -77,21 +89,18 @@
         let roomID, myRole, myName, gameData = {};
 
         window.joinGame = () => {
-            roomID = document.getElementById('roomInput').value.trim();
+            roomID = document.getElementById('roomInput').value.trim().toLowerCase();
             myName = document.getElementById('playerName').value.trim();
-            if(!roomID || !myName) return alert("Sabhai detail bharnuhos!");
+            if(!roomID || !myName) return alert("Details bharnuhos!");
 
             const roomRef = ref(db, 'rooms/' + roomID);
-
             onValue(roomRef, (snapshot) => {
                 const data = snapshot.val();
+                if (myRole && !data) { location.reload(); return; }
+
                 if (!data) {
                     myRole = "p1";
-                    set(roomRef, { 
-                        state: "selecting", turn: "p1", round: 1,
-                        p1_name: myName, p1_score: 0, p2_score: 0,
-                        p1_joined: true
-                    });
+                    set(roomRef, { state: "selecting", turn: "p1", round: 1, p1_name: myName, p1_score: 0, p2_score: 0, p1_joined: true });
                 } else if (!myRole) {
                     myRole = "p2";
                     update(roomRef, { p2_name: myName, p2_joined: true });
@@ -120,88 +129,89 @@
 
         function handleClick(index) {
             const roomRef = ref(db, 'rooms/' + roomID);
-
-            // 1. Poison Selection Phase
             if (gameData.state === "selecting") {
-                if (myRole === "p1" && gameData.p1_poison === undefined) {
-                    update(roomRef, { p1_poison: index });
-                } else if (myRole === "p2" && gameData.p2_poison === undefined) {
-                    update(roomRef, { p2_poison: index });
-                }
-                
-                // Dubai le chhani sake pachi khel suru hunchha
-                // Note: Logic syncs on next data update
+                if (myRole === "p1" && gameData.p1_poison === undefined) update(roomRef, { p1_poison: index });
+                if (myRole === "p2" && gameData.p2_poison === undefined) update(roomRef, { p2_poison: index });
             } 
-            // 2. Playing Phase
             else if (gameData.state === "playing" && gameData.turn === myRole) {
-                if (gameData[`rem_${index}`]) return; // Pahilei remove bhayeko
-
-                const oppPoison = (myRole === "p1") ? gameData.p2_poison : gameData.p1_poison;
+                if (gameData[`rem_${index}`]) return;
                 
-                if (index === oppPoison) {
-                    startNextRound(myRole === "p1" ? "p2" : "p1");
+                // Naya Logic: Dubai ko poison check garne
+                const p1Poison = gameData.p1_poison;
+                const p2Poison = gameData.p2_poison;
+                
+                if (index === p1Poison || index === p2Poison) {
+                    // Jasle click garyo, u haryo! Round Winner arko player hunchha.
+                    const roundWinnerRole = (myRole === "p1") ? "p2" : "p1";
+                    handleVictory(roundWinnerRole);
                 } else {
-                    update(roomRef, { 
-                        turn: (myRole === "p1" ? "p2" : "p1"),
-                        [`rem_${index}`]: true 
-                    });
+                    update(roomRef, { turn: (myRole === "p1" ? "p2" : "p1"), [`rem_${index}`]: true });
                 }
             }
         }
 
-        function startNextRound(winner) {
+        function handleVictory(winnerRole) {
             const roomRef = ref(db, 'rooms/' + roomID);
+            const winnerName = gameData[winnerRole + "_name"];
             const nextR = (gameData.round || 1) + 1;
-            const newScore = (gameData[winner + "_score"] || 0) + 1;
+            const newScore = (gameData[winnerRole + "_score"] || 0) + 1;
 
-            if (nextR > 11) {
-                alert(`Game Over! Winner: ${gameData[winner + "_name"]}`);
-                set(roomRef, null);
-                location.reload();
-            } else {
-                alert("Boom! You hit the poison! Round Resetting...");
-                let reset = {
-                    state: "selecting", turn: "p1", round: nextR,
-                    p1_poison: null, p2_poison: null,
-                    [winner + "_score"]: newScore
-                };
-                for(let i=0; i<12; i++) reset[`rem_${i}`] = null;
-                update(roomRef, reset);
-            }
+            update(roomRef, { state: "round_ended", last_round_winner: winnerName });
+
+            setTimeout(() => {
+                if (nextR > 11) {
+                    update(roomRef, { state: "final_ended", final_winner: winnerName, [winnerRole + "_score"]: newScore });
+                } else {
+                    let reset = { 
+                        state: "selecting", turn: "p1", round: nextR, 
+                        p1_poison: null, p2_poison: null, 
+                        [winnerRole + "_score"]: newScore,
+                        last_round_winner: "" 
+                    };
+                    for(let i=0; i<12; i++) reset[`rem_${i}`] = null;
+                    update(roomRef, reset);
+                }
+            }, 2500);
         }
+
+        window.exitRoom = () => { remove(ref(db, 'rooms/' + roomID)).then(() => location.reload()); };
 
         function renderUI() {
             if (!gameData.state) return;
-
-            // Update Scoreboard
             document.getElementById('p1-info').innerText = `${gameData.p1_name || 'P1'}: ${gameData.p1_score}`;
             document.getElementById('p2-info').innerText = `${gameData.p2_name || 'P2'}: ${gameData.p2_score}`;
             document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
 
             const statusText = document.getElementById('status-text');
-            const myPoison = (myRole === "p1") ? gameData.p1_poison : gameData.p2_poison;
+            const roundOverlay = document.getElementById('round-winner-overlay');
+            const finalOverlay = document.getElementById('final-winner-overlay');
 
-            // Auto-start game if both selected
+            // Winner Overlays
+            if (gameData.state === "round_ended") {
+                roundOverlay.classList.remove('hidden');
+                document.getElementById('round-winner-text').innerText = gameData.last_round_winner + " WON!";
+            } else { roundOverlay.classList.add('hidden'); }
+
+            if (gameData.state === "final_ended") {
+                finalOverlay.classList.remove('hidden');
+                document.getElementById('final-winner-text').innerText = gameData.final_winner;
+            }
+
             if (gameData.state === "selecting" && gameData.p1_poison !== undefined && gameData.p2_poison !== undefined) {
                 update(ref(db, 'rooms/' + roomID), { state: "playing" });
             }
 
-            // Render Grid Updates
             for (let i = 0; i < 12; i++) {
                 const el = document.getElementById(`candy-${i}`);
                 if (gameData[`rem_${i}`]) el.classList.add('removed');
                 else el.classList.remove('removed');
-
-                // Aafu le rojeko poison ma RED mark lagaune
-                if (myPoison === i) el.classList.add('my-poison-mark');
-                else el.classList.remove('my-poison-mark');
             }
 
-            // Update Status Messages
             if (gameData.state === "selecting") {
-                statusText.innerText = (myPoison === undefined) ? "Select your SECRET Poison!" : "Waiting for opponent...";
+                const myPoisoned = (myRole === "p1" ? gameData.p1_poison : gameData.p2_poison) !== undefined;
+                statusText.innerText = (!myPoisoned) ? "SET YOUR POISON 💀" : "WAITING FOR OPPONENT...";
             } else if (gameData.state === "playing") {
-                statusText.innerText = (gameData.turn === myRole) ? "YOUR TURN! Pick safe 🍫" : "Opponent's Turn...";
+                statusText.innerText = (gameData.turn === myRole) ? "👉 YOUR TURN!" : "OPPONENT'S TURN...";
             }
         }
     </script>
