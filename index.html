@@ -1,38 +1,179 @@
 <!DOCTYPE html>
-<html>
+<html lang="ne">
 <head>
-  <meta charset="UTF-8">
-  <title>Poison or Save</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poison & Save - Viral Game</title>
+    <style>
+        :root { --primary: #780000; --bg: #fdf0d5; --accent: #669bbc; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: var(--primary); margin: 10px 0; font-size: 24px; }
+        
+        #setup-section, #game-section { width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); box-sizing: border-box; }
+        input { width: 80%; padding: 10px; margin: 10px 0; border: 2px solid #ddd; border-radius: 8px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
+
+        .scoreboard { display: flex; justify-content: space-between; background: var(--accent); color: white; padding: 10px; border-radius: 10px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
+        .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #eee; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .candy:active { transform: scale(0.9); }
+        .candy.removed { opacity: 0.1; cursor: default; pointer-events: none; }
+        .status { font-weight: bold; color: var(--primary); margin: 10px 0; min-height: 40px; }
+        .hidden { display: none; }
+        .round-info { font-size: 14px; color: #555; }
+    </style>
 </head>
 <body>
 
-<h1>☠️ Poison or Save ❤️</h1>
+    <h1>🍫 Poison & Save</h1>
 
-<div id="menu">
-  <input id="playerName" placeholder="Your Name">
-  <input id="roomId" placeholder="Room Code (join only)">
-  <button onclick="createRoom()">Create Room</button>
-  <button onclick="joinRoom()">Join Room</button>
-</div>
+    <div id="setup-section">
+        <input type="text" id="playerName" placeholder="Tapaiko Naam">
+        <input type="text" id="roomInput" placeholder="Room Name (e.g. viral100)">
+        <button onclick="joinGame()">Khel Suru Garnuhos</button>
+    </div>
 
-<div id="game" style="display:none;">
-  <h2 id="roomTitle"></h2>
-  <p id="players"></p>
+    <div id="game-section" class="hidden">
+        <div class="scoreboard">
+            <div id="p1-display">P1: 0</div>
+            <div class="round-info" id="round-display">Round: 1/11</div>
+            <div id="p2-display">P2: 0</div>
+        </div>
+        <div class="status" id="status">Connecting...</div>
+        <div id="grid" class="grid"></div>
+    </div>
 
-  <p id="timer">⏱️</p>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  <div id="choices">
-    <button class="poison" onclick="choose('poison')">☠️ Poison</button>
-    <button class="save" onclick="choose('save')">❤️ Save</button>
-  </div>
+        // *** YAHA AFNO FIREBASE CONFIG HALNUHOS ***
+        const firebaseConfig = {
+             apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
+  authDomain: "poison-and-save.firebaseapp.com",
+  projectId: "poison-and-save",
+  storageBucket: "poison-and-save.firebasestorage.app",
+  messagingSenderId: "475847800468",
+  appId: "1:475847800468:web:93605c30c6c6c775e2a681",
+  measurementId: "G-VR6WKKB1DV"
 
-  <div id="result"></div>
-</div>
+        };
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="script.js"></script>
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        let roomID, myRole, myName, gameData = {};
 
+        window.joinGame = () => {
+            roomID = document.getElementById('roomInput').value;
+            myName = document.getElementById('playerName').value;
+            if(!roomID || !myName) return alert("Naam ra Room Name halnuhos!");
+
+            const roomRef = ref(db, 'rooms/' + roomID);
+            onValue(roomRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
+                    myRole = "p1";
+                    set(roomRef, { turn: "p1", state: "selecting", p1_name: myName, p1_score: 0, p2_score: 0, round: 1 });
+                } else if (!myRole) {
+                    myRole = "p2";
+                    update(roomRef, { p2_name: myName, p2_joined: true });
+                }
+                gameData = data || {};
+                renderUI();
+            });
+
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            createGrid();
+        };
+
+        function createGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = "";
+            for (let i = 0; i < 12; i++) {
+                let div = document.createElement('div');
+                div.className = 'candy';
+                div.id = "candy-" + i;
+                div.innerHTML = "🍫";
+                div.onclick = () => handleClick(i);
+                grid.appendChild(div);
+            }
+        }
+
+        function handleClick(index) {
+            const roomRef = ref(db, 'rooms/' + roomID);
+            if (gameData.state === "selecting") {
+                if (myRole === "p1" && gameData.p1_poison === undefined) {
+                    update(roomRef, { p1_poison: index });
+                } else if (myRole === "p2" && gameData.p2_poison === undefined) {
+                    update(roomRef, { p2_poison: index });
+                }
+                checkStart();
+            } 
+            else if (gameData.state === "playing" && gameData.turn === myRole) {
+                const opponentPoison = myRole === "p1" ? gameData.p2_poison : gameData.p1_poison;
+                if (index === opponentPoison) {
+                    handleRoundEnd();
+                } else {
+                    update(roomRef, { 
+                        turn: myRole === "p1" ? "p2" : "p1",
+                        [`removed_${index}`]: true 
+                    });
+                }
+            }
+        }
+
+        function checkStart() {
+            if (gameData.p1_poison !== undefined && gameData.p2_poison !== undefined) {
+                update(ref(db, 'rooms/' + roomID), { state: "playing" });
+            }
+        }
+
+        function handleRoundEnd() {
+            const roomRef = ref(db, 'rooms/' + roomID);
+            const winner = myRole === "p1" ? "p2" : "p1";
+            const newScore = (gameData[winner + "_score"] || 0) + 1;
+            const nextRound = (gameData.round || 1) + 1;
+
+            if (nextRound > 11) {
+                alert("Game Over! Final Winner: " + (gameData.p1_score > gameData.p2_score ? gameData.p1_name : gameData.p2_name));
+                set(roomRef, null);
+                location.reload();
+            } else {
+                alert("You hit the poison! Next Round starting...");
+                // Reset for next round
+                let resetData = {
+                    state: "selecting",
+                    turn: "p1",
+                    round: nextRound,
+                    [winner + "_score"]: newScore
+                };
+                // Clear old round data
+                for(let i=0; i<12; i++) resetData[`removed_${i}`] = null;
+                resetData[`p1_poison`] = null;
+                resetData[`p2_poison`] = null;
+                update(roomRef, resetData);
+            }
+        }
+
+        function renderUI() {
+            const status = document.getElementById('status');
+            document.getElementById('p1-display').innerText = (gameData.p1_name || "P1") + ": " + (gameData.p1_score || 0);
+            document.getElementById('p2-display').innerText = (gameData.p2_name || "P2") + ": " + (gameData.p2_score || 0);
+            document.getElementById('round-display').innerText = "Round: " + (gameData.round || 1) + "/11";
+
+            if (gameData.state === "selecting") {
+                const chosen = (myRole === "p1" ? gameData.p1_poison : gameData.p2_poison) !== undefined;
+                status.innerText = chosen ? "Waiting for opponent..." : "Pick your SECRET Poison!";
+            } else if (gameData.state === "playing") {
+                status.innerText = gameData.turn === myRole ? "YOUR TURN!" : "Opponent is thinking...";
+                for (let i = 0; i < 12; i++) {
+                    const el = document.getElementById("candy-" + i);
+                    if (gameData[`removed_${i}`]) el.classList.add('removed');
+                    else el.classList.remove('removed');
+                }
+            }
+        }
+    </script>
 </body>
 </html>
