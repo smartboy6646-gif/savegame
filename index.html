@@ -3,237 +3,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Poison & Save: Final Fix</title>
+    <title>Poison & Save: Hub Edition</title>
     <style>
         :root { --primary: #780000; --bg: #fdf0d5; --accent: #003049; --gold: #fcbf49; --red-flash: #ff4d4d; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: manipulation; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         
-        #game-container { width: 95%; max-width: 400px; height: 95vh; background: white; padding: 15px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; }
+        #game-container { width: 95%; max-width: 400px; height: 92vh; background: white; padding: 15px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; }
         
-        /* Scoreboard: Jati player uti ota column matra banxa */
-        .scoreboard { display: grid; gap: 8px; background: var(--accent); color: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; font-size: 12px; }
-        .player-slot { padding: 6px; border-radius: 8px; border: 2px solid transparent; text-align: center; background: rgba(255,255,255,0.05); }
-        .active-turn { border-color: var(--gold); background: rgba(252, 191, 73, 0.2); box-shadow: 0 0 10px var(--gold); }
-        .you-tag { color: var(--gold); font-size: 9px; font-weight: bold; display: block; }
-
+        /* Entry & Hub Styles */
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+        .room-card { background: #f8f9fa; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); }
+        
+        /* Game Styles */
+        .scoreboard { display: grid; gap: 8px; background: var(--accent); color: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; }
+        .player-slot { padding: 6px; border-radius: 8px; border: 2px solid transparent; text-align: center; background: rgba(255,255,255,0.1); }
+        .active-turn { border-color: var(--gold); background: rgba(252, 191, 73, 0.2); }
+        
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-grow: 1; align-content: center; }
-        .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 0 #eee; }
-        .selecting-red { background: var(--red-flash) !important; transform: scale(0.95); transition: 0.1s; border-color: white !important; }
+        .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
+        .selecting-red { background: var(--red-flash) !important; border-color: white !important; }
         .removed { visibility: hidden; pointer-events: none; }
         
-        input { width: 100%; padding: 15px; margin: 8px 0; border: 2px solid #ddd; border-radius: 12px; text-align: center; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; }
         .hidden { display: none !important; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; background: rgba(0,0,0,0.9); color: white; border-radius: 25px; }
+        .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:white; z-index: 2000; padding: 25px; text-align:center; border-radius: 25px; }
+        .game-overlay { background: rgba(0,0,0,0.9); color: white; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <div id="setup-section">
-        <h2 style="color:var(--primary); text-align:center;">🍫 Poison & Save</h2>
+    <div id="hub-screen">
+        <h2 style="text-align:center; color:var(--primary); margin:5px;">🍫 Poison & Save</h2>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <input type="text" id="roomInput" placeholder="Room ID" oninput="checkRoom()">
-        <div id="join-status" class="hidden" style="background:#e8f5e9; padding:10px; border-radius:10px; margin:10px 0; text-align:center;">
-            <p style="color:#2e7d32; font-weight:bold; margin:5px;">✅ Room Available!</p>
-            <button class="btn" style="background:#2e7d32;" onclick="joinGame()">JOIN NOW</button>
+        
+        <button class="btn" style="background:var(--accent);" onclick="showCreateModal()">+ CREATE NEW ROOM</button>
+        
+        <div style="margin-top:15px; height: 300px; overflow-y: auto;">
+            <p style="font-weight:bold; font-size:14px; color:#666;">Available Rooms:</p>
+            <div id="active-rooms-list">Scanning...</div>
         </div>
-        <button id="create-btn" class="btn" onclick="joinGame()">CREATE NEW ROOM</button>
     </div>
 
-    <div id="lobby-section" class="hidden" style="text-align:center; padding:10px;">
-        <h3>Room: <span id="room-id-txt"></span></h3>
-        <div id="lobby-players" style="margin:20px 0; font-weight:bold; color:var(--accent);"></div>
-        <p style="font-size:12px; color:gray;">Wait for at least 2 players...</p>
-        <button id="start-btn" class="btn hidden" onclick="hostStart()">START GAME 🚀</button>
+    <div id="create-modal" class="overlay hidden">
+        <h3>Create Room</h3>
+        <input type="text" id="newRoomId" placeholder="Room Name">
+        <input type="password" id="newRoomPass" placeholder="Set Room PIN">
+        <button class="btn" onclick="createNewRoom()">CREATE & ENTER</button>
+        <p onclick="closeModals()" style="color:gray; cursor:pointer;">Back</p>
     </div>
 
-    <div id="game-section" class="hidden" style="height: 100%; display: flex; flex-direction: column;">
-        <div style="text-align: right;"><button onclick="location.reload()" style="background:none; border:none; color:gray; font-size:11px;">EXIT</button></div>
-        <div class="scoreboard" id="scoreboard"></div>
-        <div id="status-text" style="text-align:center; font-weight:bold; color:var(--primary); margin:5px;">Wait...</div>
-        <div id="grid" class="grid"></div>
-        <div id="round-info" style="text-align:center; font-size:11px; color:gray; margin-top:5px;">Round 1/11</div>
+    <div id="join-modal" class="overlay hidden">
+        <h3>Enter Room PIN</h3>
+        <p id="target-room-name" style="font-weight:bold; color:var(--primary);"></p>
+        <input type="password" id="joinPinInput" placeholder="Enter PIN">
+        <button class="btn" style="background:#2d6a4f;" onclick="verifyAndJoin()">JOIN GAME</button>
+        <p onclick="closeModals()" style="color:gray; cursor:pointer;">Cancel</p>
     </div>
 
-    <div id="round-overlay" class="overlay hidden"><h2 id="r-win-txt"></h2></div>
+    <div id="game-section" class="hidden" style="height:100%; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <button id="close-room-btn" class="hidden" onclick="closeRoom()" style="color:red; border:none; background:none; font-size:11px;">CLOSE ROOM</button>
+            <button onclick="location.reload()" style="color:gray; border:none; background:none; font-size:11px;">EXIT</button>
+        </div>
+
+        <div id="lobby-ui" style="text-align:center;">
+            <h3 id="room-title"></h3>
+            <div id="p-list" style="margin:15px 0; font-weight:bold;"></div>
+            <button id="start-btn" class="btn hidden" onclick="hostStart()">START GAME 🚀</button>
+            <p id="wait-msg">Waiting for more players...</p>
+        </div>
+
+        <div id="play-ui" class="hidden" style="height:100%; display:flex; flex-direction:column;">
+            <div class="scoreboard" id="scoreboard"></div>
+            <div id="status-txt" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:5px;">Wait...</div>
+            <div id="grid" class="grid"></div>
+        </div>
+    </div>
+
+    <div id="round-overlay" class="overlay game-overlay hidden"><h2 id="r-winner"></h2></div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const firebaseConfig = {  apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
+    const firebaseConfig = { apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
   authDomain: "poison-and-save.firebaseapp.com",
   databaseURL: "https://poison-and-save-default-rtdb.firebaseio.com",
   projectId: "poison-and-save",
   storageBucket: "poison-and-save.firebasestorage.app",
   messagingSenderId: "475847800468",
   appId: "1:475847800468:web:93605c30c6c6c775e2a681",
-  measurementId: "G-VR6WKKB1DV "};
+  measurementId: "G-VR6WKKB1DV" };
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let myRole, myName, roomID, gameData = {};
+    let myRole, myName, selectedId, gameData = {};
 
-    window.checkRoom = async () => {
-        const id = document.getElementById('roomInput').value.trim().toLowerCase();
-        if(id.length < 3) return;
-        const snap = await get(ref(db, 'rooms/' + id));
-        if(snap.exists()) {
-            document.getElementById('join-status').classList.remove('hidden');
-            document.getElementById('create-btn').classList.add('hidden');
-        } else {
-            document.getElementById('join-status').classList.add('hidden');
-            document.getElementById('create-btn').classList.remove('hidden');
-        }
+    window.onload = () => {
+        const n = localStorage.getItem('pName');
+        if(n) document.getElementById('playerName').value = n;
+        listenRooms();
     };
 
-    window.joinGame = () => {
-        roomID = document.getElementById('roomInput').value.trim().toLowerCase();
-        myName = document.getElementById('playerName').value.trim();
-        if(!roomID || !myName) return alert("Details bharnus!");
-
-        const roomRef = ref(db, 'rooms/' + roomID);
-        onValue(roomRef, (snapshot) => {
-            const data = snapshot.val();
-            if(!data && !myRole) {
-                myRole = "p1";
-                set(roomRef, { state:"waiting", p1_name:myName, playerCount:1, round:1 });
-            } else if(data && !myRole) {
-                const count = (data.playerCount || 0) + 1;
-                if(count > 4) return alert("Full!");
-                myRole = "p" + count;
-                update(roomRef, { [`p${count}_name`]: myName, playerCount: count });
-            }
-            gameData = data || {};
-            syncUI();
-        });
-        document.getElementById('setup-section').classList.add('hidden');
-        document.getElementById('lobby-section').classList.remove('hidden');
-    };
-
-    function syncUI() {
-        if(!gameData.state) return;
-
-        // Lobby Logic
-        if(gameData.state === "waiting") {
-            document.getElementById('room-id-txt').innerText = roomID;
-            let list = "";
-            for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) list += "✅ " + gameData[`p${i}_name`] + "<br>";
-            document.getElementById('lobby-players').innerHTML = list;
-            if(myRole === 'p1' && gameData.playerCount >= 2) document.getElementById('start-btn').classList.remove('hidden');
-        }
-
-        // Switch to Game
-        if(gameData.state === "selecting" || gameData.state === "playing" || gameData.state === "round_ended") {
-            document.getElementById('lobby-section').classList.add('hidden');
-            document.getElementById('game-section').classList.remove('hidden');
-            
-            // Dynamic Scoreboard: Jati player uti matra dekhau
-            const sb = document.getElementById('scoreboard');
-            sb.style.gridTemplateColumns = `repeat(${gameData.playerCount}, 1fr)`;
-            sb.innerHTML = "";
-            for(let i=1; i<=gameData.playerCount; i++) {
-                const active = gameData.turn === `p${i}` && gameData.state === "playing";
-                sb.innerHTML += `
-                    <div class="player-slot ${active ? 'active-turn' : ''}">
-                        ${myRole === `p${i}` ? '<span class="you-tag">YOU</span>' : ''}
-                        ${gameData[`p${i}_name`]}<br>
-                        <b style="font-size:16px;">${gameData[`p${i}_score`] || 0}</b>
+    function listenRooms() {
+        onValue(ref(db, 'rooms'), (snap) => {
+            const rooms = snap.val();
+            const list = document.getElementById('active-rooms-list');
+            list.innerHTML = "";
+            if(!rooms) return list.innerHTML = "No rooms available.";
+            Object.keys(rooms).forEach(id => {
+                if(rooms[id].state === "waiting") {
+                    list.innerHTML += `<div class="room-card">
+                        <div><b>${id}</b><br><small>${rooms[id].playerCount}/4 Players</small></div>
+                        <button class="btn" style="width:70px; padding:5px; font-size:11px;" onclick="openJoinModal('${id}')">JOIN</button>
                     </div>`;
-            }
+                }
+            });
+        });
+    }
 
-            document.getElementById('round-info').innerText = `Round ${gameData.round}/11`;
-            const status = document.getElementById('status-text');
+    window.showCreateModal = () => document.getElementById('create-modal').classList.remove('hidden');
+    window.closeModals = () => {
+        document.getElementById('create-modal').classList.add('hidden');
+        document.getElementById('join-modal').classList.add('hidden');
+    };
+
+    window.createNewRoom = () => {
+        const id = document.getElementById('newRoomId').value.trim().toLowerCase();
+        const pin = document.getElementById('newRoomPass').value.trim();
+        myName = document.getElementById('playerName').value.trim();
+        if(!id || !pin || !myName) return alert("Fill all details!");
+        localStorage.setItem('pName', myName);
+        myRole = "p1"; selectedId = id;
+        set(ref(db, 'rooms/'+id), { state:"waiting", pin:pin, playerCount:1, p1_name:myName, round:1 });
+        enterRoom();
+    };
+
+    window.openJoinModal = (id) => {
+        selectedId = id;
+        document.getElementById('target-room-name').innerText = "Room: " + id;
+        document.getElementById('join-modal').classList.remove('hidden');
+    };
+
+    window.verifyAndJoin = async () => {
+        const pin = document.getElementById('joinPinInput').value.trim();
+        myName = document.getElementById('playerName').value.trim();
+        if(!myName) return alert("Enter your name first!");
+        const snap = await get(ref(db, 'rooms/'+selectedId));
+        if(snap.val().pin === pin) {
+            const count = snap.val().playerCount + 1;
+            myRole = "p" + count;
+            update(ref(db, 'rooms/'+selectedId), { [`p${count}_name`]:myName, playerCount:count });
+            enterRoom();
+        } else alert("Wrong PIN!");
+    };
+
+    function enterRoom() {
+        closeModals();
+        document.getElementById('hub-screen').classList.add('hidden');
+        document.getElementById('game-section').classList.remove('hidden');
+        if(myRole === 'p1') document.getElementById('close-room-btn').classList.remove('hidden');
+
+        onValue(ref(db, 'rooms/'+selectedId), (snap) => {
+            gameData = snap.val();
+            if(!gameData) return location.reload(); // Room closed
             
-            if(gameData.state === "selecting") {
-                status.innerText = gameData[myRole+"_poison"] !== undefined ? "WAITING..." : "SELECT YOUR POISON 💀";
-                let allReady = true;
-                for(let i=1; i<=gameData.playerCount; i++) if(gameData[`p${i}_poison`] === undefined) allReady = false;
-                if(allReady && myRole === 'p1') update(ref(db, 'rooms/'+roomID), { state: "playing" });
-            } else {
-                status.innerText = gameData.turn === myRole ? "👉 YOUR TURN" : "SATHI KO TURN...";
-            }
+            document.getElementById('room-title').innerText = selectedId;
+            let ns = ""; for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) ns += "✅ " + gameData[`p${i}_name`] + "<br>";
+            document.getElementById('p-list').innerHTML = ns;
 
-            // Grid Sync
-            if(document.getElementById('grid').innerHTML === "") createGrid();
-            for(let i=0; i<12; i++) {
-                const el = document.getElementById("c-"+i);
-                if(gameData[`rem_${i}`]) el.classList.add('removed');
-                else if(!el.classList.contains('selecting-red')) el.classList.remove('removed');
+            if(myRole === 'p1' && gameData.playerCount >= 2) document.getElementById('start-btn').classList.remove('hidden');
+
+            if(gameData.state !== "waiting") {
+                document.getElementById('lobby-ui').classList.add('hidden');
+                document.getElementById('play-ui').classList.remove('hidden');
+                syncGame();
             }
+        });
+    }
+
+    function syncGame() {
+        const sb = document.getElementById('scoreboard');
+        sb.style.gridTemplateColumns = `repeat(${gameData.playerCount}, 1fr)`;
+        sb.innerHTML = "";
+        for(let i=1; i<=gameData.playerCount; i++) {
+            const active = gameData.turn === `p${i}` && gameData.state === "playing";
+            sb.innerHTML += `<div class="player-slot ${active?'active-turn':''}">
+                <small>${myRole===`p${i}`?'YOU':''}</small><br>
+                ${gameData[`p${i}_name`]}<br><b>${gameData[`p${i}_score`]||0}</b>
+            </div>`;
+        }
+
+        const st = document.getElementById('status-txt');
+        if(gameData.state === "selecting") {
+            st.innerText = gameData[myRole+"_poison"] !== undefined ? "WAITING..." : "CHOOSE POISON 💀";
+            let all = true; for(let i=1; i<=gameData.playerCount; i++) if(gameData[`p${i}_poison`] === undefined) all = false;
+            if(all && myRole === 'p1') update(ref(db, 'rooms/'+selectedId), { state:"playing" });
+        } else {
+            st.innerText = gameData.turn === myRole ? "👉 YOUR TURN" : "WAITING...";
+        }
+
+        if(document.getElementById('grid').innerHTML==="") createGrid();
+        for(let i=0; i<12; i++) {
+            const el = document.getElementById("c-"+i);
+            if(gameData[`rem_${i}`]) el.classList.add('removed');
+            else if(!el.classList.contains('selecting-red')) el.classList.remove('removed');
         }
 
         if(gameData.state === "round_ended") {
             document.getElementById('round-overlay').classList.remove('hidden');
-            document.getElementById('r-win-txt').innerText = gameData.last_winner + " Wins Round!";
-        } else {
-            document.getElementById('round-overlay').classList.add('hidden');
-        }
+            document.getElementById('r-winner').innerText = gameData.last_win + " Wins Round!";
+        } else document.getElementById('round-overlay').classList.add('hidden');
     }
 
-    window.hostStart = () => update(ref(db, 'rooms/' + roomID), { state: "selecting", turn: "p1" });
+    window.hostStart = () => update(ref(db, 'rooms/'+selectedId), { state:"selecting", turn:"p1" });
+
+    window.closeRoom = () => { if(confirm("Close room?")) remove(ref(db, 'rooms/'+selectedId)); };
 
     function createGrid() {
-        const grid = document.getElementById('grid'); grid.innerHTML = "";
+        const g = document.getElementById('grid'); g.innerHTML = "";
         for(let i=0; i<12; i++) {
-            let d = document.createElement('div'); d.className = 'candy'; d.innerHTML = "🍫"; d.id = "c-"+i;
-            d.onclick = () => handleClick(i);
-            grid.appendChild(d);
+            let d = document.createElement('div'); d.className='candy'; d.id="c-"+i; d.innerHTML="🍫";
+            d.onclick=()=>handleMove(i); g.appendChild(d);
         }
     }
 
-    function handleClick(index) {
-        const roomRef = ref(db, 'rooms/' + roomID);
-        const el = document.getElementById("c-"+index);
-
+    function handleMove(i) {
+        const refR = ref(db, 'rooms/'+selectedId);
+        const el = document.getElementById("c-"+i);
         if(gameData.state === "selecting" && gameData[myRole+"_poison"] === undefined) {
             el.classList.add('selecting-red');
-            setTimeout(() => {
-                update(roomRef, { [myRole+"_poison"]: index });
-                el.classList.remove('selecting-red');
-            }, 1000);
+            setTimeout(() => { update(refR, {[myRole+"_poison"]:i}); el.classList.remove('selecting-red'); }, 800);
         } else if(gameData.state === "playing" && gameData.turn === myRole) {
-            if(gameData[`rem_${index}`]) return;
-            
-            let hit = false;
-            for(let i=1; i<=gameData.playerCount; i++) if(index === gameData[`p${i}_poison`]) hit = true;
-
+            if(gameData[`rem_${i}`]) return;
+            let hit = false; for(let j=1; j<=gameData.playerCount; j++) if(i === gameData[`p${j}_poison`]) hit = true;
             if(hit) {
                 el.classList.add('selecting-red');
-                setTimeout(() => finishRound(), 800);
+                setTimeout(() => {
+                    let prev = parseInt(myRole.substring(1)) - 1; if(prev < 1) prev = gameData.playerCount;
+                    const win = "p"+prev;
+                    update(refR, { state:"round_ended", last_win: gameData[win+"_name"], [win+"_score"]:(gameData[win+"_score"]||0)+1 });
+                    setTimeout(() => {
+                        let reset = { state:"selecting", turn:"p1", round: gameData.round+1 };
+                        for(let k=1; k<=4; k++) reset[`p${k}_poison`] = null;
+                        for(let k=0; k<12; k++) reset[`rem_${k}`] = null;
+                        update(refR, reset);
+                    }, 2500);
+                }, 800);
             } else {
-                let nextNum = parseInt(myRole.substring(1)) + 1;
-                if(nextNum > gameData.playerCount) nextNum = 1;
-                update(roomRef, { turn: "p"+nextNum, [`rem_${index}`]: true });
+                let n = parseInt(myRole.substring(1)) + 1; if(n > gameData.playerCount) n = 1;
+                update(refR, { turn: "p"+n, [`rem_${i}`]: true });
             }
         }
-    }
-
-    function finishRound() {
-        const roomRef = ref(db, 'rooms/' + roomID);
-        // Round Winner is the person BEFORE the one who hit poison
-        let winNum = parseInt(gameData.turn.substring(1)) - 1;
-        if(winNum < 1) winNum = gameData.playerCount;
-        const winner = "p" + winNum;
-
-        const nextRound = gameData.round + 1;
-        const newScore = (gameData[winner+"_score"] || 0) + 1;
-
-        update(roomRef, { 
-            state: "round_ended", 
-            last_winner: gameData[winner+"_name"],
-            [winner+"_score"]: newScore
-        });
-
-        setTimeout(() => {
-            let reset = { state: "selecting", turn: "p1", round: nextRound };
-            for(let i=1; i<=4; i++) reset[`p${i}_poison`] = null;
-            for(let i=0; i<12; i++) reset[`rem_${i}`] = null;
-            update(roomRef, reset);
-        }, 2500);
     }
 </script>
 </body>
