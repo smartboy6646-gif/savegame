@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Poison & Save: Audio Edition</title>
+    <title>Poison & Save: Final Edition</title>
     <style>
         :root { --primary: #780000; --bg: #fdf0d5; --accent: #003049; --gold: #fcbf49; --red-flash: #ff4d4d; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
@@ -11,25 +11,24 @@
         
         #game-container { width: 95%; max-width: 400px; height: 92vh; background: white; padding: 15px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; }
         
-        /* Hub & Modals */
+        /* Layout & UI */
         input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; }
         .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
         .room-card { background: #f8f9fa; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); }
-        .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:white; z-index: 2000; padding: 25px; text-align:center; border-radius: 25px; }
+        .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:white; z-index: 2000; padding: 25px; text-align:center; border-radius: 25px; display: flex; flex-direction: column; justify-content: center; }
         
-        /* Game UI */
+        /* Game Board */
         .scoreboard { display: grid; gap: 8px; background: var(--accent); color: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; }
-        .player-slot { padding: 6px; border-radius: 8px; border: 2px solid transparent; text-align: center; background: rgba(255,255,255,0.1); }
+        .player-slot { padding: 6px; border-radius: 8px; border: 2px solid transparent; text-align: center; background: rgba(255,255,255,0.1); font-size: 13px; }
         .active-turn { border-color: var(--gold); background: rgba(252, 191, 73, 0.2); }
-        
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-grow: 1; align-content: center; }
-        .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
+        .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; transition: 0.1s; box-shadow: 0 4px 0 #eee; }
         
-        /* The Red Fix */
-        .red-hit { background: var(--red-flash) !important; border-color: white !important; transform: scale(0.9); }
+        /* Fix Classes */
+        .red-hit { background: var(--red-flash) !important; border-color: white !important; transform: scale(0.9); box-shadow: none; }
         .removed { visibility: hidden; pointer-events: none; }
         .hidden { display: none !important; }
-        .game-overlay { background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .game-overlay { background: rgba(0,0,0,0.9); color: white; z-index: 3000; }
     </style>
 </head>
 <body>
@@ -38,7 +37,7 @@
     <div id="hub-screen">
         <h2 style="text-align:center; color:var(--primary);">🍫 Poison & Save</h2>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <button class="btn" style="background:var(--accent);" onclick="showCreateModal()">+ CREATE ROOM</button>
+        <button class="btn" style="background:var(--accent);" onclick="showCreateModal()">+ CREATE NEW ROOM</button>
         <div style="margin-top:15px; height: 300px; overflow-y: auto;">
             <p style="font-weight:bold; font-size:14px; color:#666;">Active Rooms:</p>
             <div id="active-rooms-list">Scanning...</div>
@@ -48,34 +47,36 @@
     <div id="create-modal" class="overlay hidden">
         <h3>Create Room</h3>
         <input type="text" id="newRoomId" placeholder="Room Name">
-        <input type="password" id="newRoomPass" placeholder="Room PIN">
-        <button class="btn" onclick="createNewRoom()">CREATE</button>
-        <p onclick="closeModals()" style="color:gray; cursor:pointer;">Back</p>
+        <input type="password" id="newRoomPass" placeholder="Set Room PIN">
+        <button class="btn" onclick="createNewRoom()">CREATE & ENTER</button>
+        <p onclick="closeModals()" style="color:gray; cursor:pointer; margin-top:10px;">Go Back</p>
     </div>
 
     <div id="join-modal" class="overlay hidden">
-        <h3>Enter PIN</h3>
-        <p id="target-room-name" style="font-weight:bold;"></p>
-        <input type="password" id="joinPinInput" placeholder="PIN">
-        <button class="btn" style="background:#2d6a4f;" onclick="verifyAndJoin()">JOIN</button>
-        <p onclick="closeModals()" style="color:gray; cursor:pointer;">Cancel</p>
+        <h3>Enter Room PIN</h3>
+        <p id="target-room-name" style="font-weight:bold; color:var(--primary);"></p>
+        <input type="password" id="joinPinInput" placeholder="Enter PIN">
+        <button class="btn" style="background:#2d6a4f;" onclick="verifyAndJoin()">JOIN GAME</button>
+        <p onclick="closeModals()" style="color:gray; cursor:pointer; margin-top:10px;">Cancel</p>
     </div>
 
     <div id="game-section" class="hidden" style="height:100%; display:flex; flex-direction:column;">
         <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-            <button id="close-room-btn" class="hidden" onclick="closeRoom()" style="color:red; border:none; background:none; font-size:10px;">CLOSE ROOM</button>
-            <button onclick="location.reload()" style="color:gray; border:none; background:none; font-size:10px;">EXIT</button>
+            <button id="close-room-btn" class="hidden" onclick="closeRoom()" style="color:red; border:none; background:none; font-size:11px; cursor:pointer;">CLOSE ROOM</button>
+            <button onclick="location.reload()" style="color:gray; border:none; background:none; font-size:11px; cursor:pointer;">EXIT</button>
         </div>
 
         <div id="lobby-ui" style="text-align:center;">
             <h3 id="room-title"></h3>
             <div id="p-list" style="margin:15px 0; font-weight:bold; color:var(--accent);"></div>
             <button id="start-btn" class="btn hidden" onclick="hostStart()">START GAME 🚀</button>
+            <p id="wait-msg" style="font-size:12px; color:gray;">Waiting for host...</p>
         </div>
 
         <div id="play-ui" class="hidden" style="height:100%; display:flex; flex-direction:column;">
+            <div id="round-info" style="text-align:center; font-size:12px; color:var(--primary); font-weight:bold; margin-bottom:5px;">Round: 1/11</div>
             <div class="scoreboard" id="scoreboard"></div>
-            <div id="status-txt" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:5px;">-</div>
+            <div id="status-txt" style="text-align:center; font-weight:bold; color:var(--primary); margin-bottom:10px;">-</div>
             <div id="grid" class="grid"></div>
         </div>
     </div>
@@ -83,9 +84,8 @@
     <div id="round-overlay" class="overlay game-overlay hidden"><h2 id="r-winner"></h2></div>
 </div>
 
-<audio id="snd-eat" src="https://cdn.discordapp.com/attachments/1420003049279324241/1458724395382997145/Eatingmucic.mp3?ex=6960ae75&is=695f5cf5&hm=134c8516116a6123912988d4dca289cf69a167fd15c4a099c34bd7a8b0ba592f&"></audio>
+<audio id="snd-eat" src="https://assets.mixkit.co/active_storage/sfx/2205/2205-preview.mp3"></audio>
 <audio id="snd-poison" src="https://cdn.discordapp.com/attachments/1420003318096461825/1458766850161905675/myinstants_2.mp3?ex=6960d5ff&is=695f847f&hm=13195023991f6a8aae479f1609e9bb08d8ffcb38453caa0ad91cff6597302b17&"></audio>
-<audio id="snd-win" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"></audio>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -98,13 +98,11 @@
   storageBucket: "poison-and-save.firebasestorage.app",
   messagingSenderId: "475847800468",
   appId: "1:475847800468:web:93605c30c6c6c775e2a681",
-  measurementId: "G-VR6WKKB1DV"};
+  measurementId: "G-VR6WKKB1DV" };
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     let myRole, myName, selectedId, gameData = {};
-
-    const playSnd = (id) => { const a = document.getElementById(id); a.currentTime = 0; a.play(); };
 
     window.onload = () => {
         const n = localStorage.getItem('pName');
@@ -113,12 +111,12 @@
             const list = document.getElementById('active-rooms-list');
             list.innerHTML = "";
             const rooms = snap.val();
-            if(!rooms) return list.innerHTML = "No rooms.";
+            if(!rooms) return list.innerHTML = "No active rooms.";
             Object.keys(rooms).forEach(id => {
                 if(rooms[id].state === "waiting") {
                     list.innerHTML += `<div class="room-card">
                         <div><b>${id}</b><br><small>${rooms[id].playerCount}/4 Players</small></div>
-                        <button class="btn" style="width:60px; padding:5px; font-size:10px;" onclick="openJoinModal('${id}')">JOIN</button>
+                        <button class="btn" style="width:70px; padding:6px; font-size:11px;" onclick="openJoinModal('${id}')">JOIN</button>
                     </div>`;
                 }
             });
@@ -144,6 +142,7 @@
     window.verifyAndJoin = async () => {
         const pin = document.getElementById('joinPinInput').value.trim();
         myName = document.getElementById('playerName').value.trim();
+        if(!myName) return alert("Enter name first!");
         const snap = await get(ref(db, 'rooms/'+selectedId));
         if(snap.val().pin === pin) {
             const count = snap.val().playerCount + 1;
@@ -163,7 +162,7 @@
             gameData = snap.val();
             if(!gameData) return location.reload();
             
-            document.getElementById('room-title').innerText = selectedId.toUpperCase();
+            document.getElementById('room-title').innerText = "ROOM: " + selectedId.toUpperCase();
             let phtml = ""; for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) phtml += "👤 "+gameData[`p${i}_name`]+"<br>";
             document.getElementById('p-list').innerHTML = phtml;
 
@@ -189,31 +188,38 @@
             </div>`;
         }
 
+        document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
         const st = document.getElementById('status-txt');
+        
         if(gameData.state === "selecting") {
-            st.innerText = gameData[myRole+"_poison"] !== undefined ? "WAITING..." : "SELECT POISON 💀";
+            st.innerText = gameData[myRole+"_poison"] !== undefined ? "WAITING..." : "CHOOSE POISON 💀";
             let all = true; for(let i=1; i<=gameData.playerCount; i++) if(gameData[`p${i}_poison`] === undefined) all = false;
             if(all && myRole === 'p1') update(ref(db, 'rooms/'+selectedId), { state:"playing" });
-        } else st.innerText = gameData.turn === myRole ? "👉 YOUR TURN" : "WAITING...";
+        } else if(gameData.state === "playing") {
+            st.innerText = gameData.turn === myRole ? "👉 YOUR TURN" : "WAITING...";
+        }
 
         if(document.getElementById('grid').innerHTML==="") createGrid();
         
         for(let i=0; i<12; i++) {
             const el = document.getElementById("c-"+i);
-            // RESET RED HIGHLIGHTS FOR NEW ROUND
-            el.classList.remove('red-hit');
-            if(gameData[`rem_${i}`]) el.classList.add('removed');
-            else el.classList.remove('removed');
+            if(gameData.state === "selecting") el.classList.remove('red-hit');
+            if(gameData[`rem_${i}`]) el.classList.add('removed'); else el.classList.remove('removed');
         }
 
         if(gameData.state === "round_ended") {
             document.getElementById('round-overlay').classList.remove('hidden');
-            document.getElementById('r-winner').innerText = gameData.last_win + " Wins!";
-        } else document.getElementById('round-overlay').classList.add('hidden');
+            document.getElementById('r-winner').innerText = gameData.last_win + " Wins Round!";
+        } else if(gameData.state === "final_ended") {
+            document.getElementById('round-overlay').classList.remove('hidden');
+            document.getElementById('r-winner').innerHTML = `🏆 CHAMPION 🏆<br>${gameData.champion}`;
+        } else {
+            document.getElementById('round-overlay').classList.add('hidden');
+        }
     }
 
     window.hostStart = () => update(ref(db, 'rooms/'+selectedId), { state:"selecting", turn:"p1" });
-    window.closeRoom = () => { if(confirm("Close room?")) remove(ref(db, 'rooms/'+selectedId)); };
+    window.closeRoom = () => { if(confirm("Close room for everyone?")) remove(ref(db, 'rooms/'+selectedId)); };
 
     function createGrid() {
         const g = document.getElementById('grid'); g.innerHTML = "";
@@ -234,22 +240,31 @@
             let isP = false; for(let j=1; j<=gameData.playerCount; j++) if(i === gameData[`p${j}_poison`]) isP = true;
             
             if(isP) {
-                playSnd('snd-poison');
+                document.getElementById('snd-poison').play();
                 el.classList.add('red-hit');
                 setTimeout(() => {
                     let winIdx = parseInt(myRole.substring(1)) - 1; if(winIdx < 1) winIdx = gameData.playerCount;
                     const w = "p"+winIdx;
+                    const nextR = gameData.round + 1;
                     update(rRef, { state:"round_ended", last_win: gameData[w+"_name"], [w+"_score"]:(gameData[w+"_score"]||0)+1 });
-                    playSnd('snd-win');
+                    
                     setTimeout(() => {
-                        let res = { state:"selecting", turn:"p1", round: gameData.round+1 };
-                        for(let k=1; k<=4; k++) res[`p${k}_poison`] = null;
-                        for(let k=0; k<12; k++) res[`rem_${k}`] = null;
-                        update(rRef, res);
+                        if(nextR > 11) {
+                            let champ = ""; let ms = -1;
+                            for(let k=1; k<=gameData.playerCount; k++) {
+                                if(gameData[`p${k}_score`] > ms) { ms = gameData[`p${k}_score`]; champ = gameData[`p${k}_name`]; }
+                            }
+                            update(rRef, { state:"final_ended", champion: champ });
+                        } else {
+                            let res = { state:"selecting", turn:"p1", round: nextR };
+                            for(let k=1; k<=4; k++) res[`p${k}_poison`] = null;
+                            for(let k=0; k<12; k++) res[`rem_${k}`] = null;
+                            update(rRef, res);
+                        }
                     }, 2500);
                 }, 600);
             } else {
-                playSnd('snd-eat');
+                document.getElementById('snd-eat').play();
                 let n = parseInt(myRole.substring(1)) + 1; if(n > gameData.playerCount) n = 1;
                 update(rRef, { turn: "p"+n, [`rem_${i}`]: true });
             }
