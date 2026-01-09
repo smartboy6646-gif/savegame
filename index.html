@@ -3,92 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Poison & Save: Ultimate Edition</title>
+    <title>Poison & Save: Final Stable</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        :root { --primary: #780000; --bg: #fdf0d5; --accent: #003049; --gold: #fcbf49; --red-flash: #ff4d4d; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: manipulation; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        #game-container { width: 95%; max-width: 400px; height: 92vh; background: white; padding: 15px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; font-size: 16px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn:active { transform: scale(0.98); }
-        .room-card { background: #f8f9fa; padding: 10px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); }
-        .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:white; z-index: 2000; padding: 25px; text-align:center; border-radius: 25px; display: flex; flex-direction: column; justify-content: center; }
-        .scoreboard { display: grid; gap: 8px; background: var(--accent); color: white; padding: 10px; border-radius: 15px; margin-bottom: 10px; }
-        .player-slot { padding: 8px; border-radius: 10px; border: 2px solid transparent; text-align: center; background: rgba(255,255,255,0.1); }
-        @keyframes neonGlow { 0%, 100% { box-shadow: 0 0 5px var(--gold); border-color: var(--gold); } 50% { box-shadow: 0 0 15px var(--gold); border-color: white; } }
-        .active-turn { animation: neonGlow 1.5s infinite ease-in-out; background: rgba(252, 191, 73, 0.2); }
+        :root { --p: #780000; --bg: #fdf0d5; --acc: #003049; --g: #fcbf49; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        #game-container { width: 95%; max-width: 400px; height: 92vh; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; }
+        .btn { background: var(--p); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+        .room-card { background: #f8f9fa; padding: 12px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--p); }
+        .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:white; z-index: 2000; padding: 20px; text-align:center; display: flex; flex-direction: column; justify-content: center; border-radius: 20px; }
+        .scoreboard { display: grid; gap: 5px; background: var(--acc); color: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; }
+        .player-slot { padding: 5px; border-radius: 8px; text-align: center; font-size: 12px; }
+        .active-turn { border: 2px solid var(--g); background: rgba(252, 191, 73, 0.2); }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-grow: 1; align-content: center; }
-        .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 4px 0 #ddd; cursor: pointer; }
-        .red-hit { background: var(--red-flash) !important; border-color: white !important; box-shadow: none; animation: shake 0.3s; }
-        @keyframes shake { 0%,100% {transform:translateX(0)} 25% {transform:translateX(-5px)} 75% {transform:translateX(5px)} }
-        .removed { visibility: hidden; opacity: 0; pointer-events: none; }
+        .candy { aspect-ratio: 1/1; font-size: 35px; background: #fff; border: 1px solid #eee; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 #ddd; }
+        .red-hit { background: #ff4d4d !important; border: none; }
+        .removed { visibility: hidden; }
         .hidden { display: none !important; }
-        .game-overlay { background: rgba(0,0,0,0.92); color: white; z-index: 3000; }
+        .final-overlay { background: rgba(0,0,0,0.9) !important; color: white !important; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
     <div id="hub-screen">
-        <h2 style="text-align:center; color:var(--primary);">🍫 Poison & Save</h2>
+        <h2 style="text-align:center; color:var(--p);">🍫 Poison & Save</h2>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <button class="btn" style="background:var(--accent);" onclick="showCreateModal()">+ CREATE NEW ROOM</button>
-        <div style="margin-top:20px; height: 320px; overflow-y: auto;"><div id="active-rooms-list">Scanning...</div></div>
+        <button class="btn" style="background:var(--acc);" onclick="openCreate()">+ CREATE ROOM</button>
+        <div style="margin-top:20px; height: 300px; overflow-y: auto;">
+            <div id="active-rooms-list">Scanning rooms...</div>
+        </div>
     </div>
 
     <div id="create-modal" class="overlay hidden">
         <h3>Create Room</h3>
-        <input type="text" id="newRoomId" placeholder="Room ID">
-        <input type="password" id="newRoomPass" placeholder="Set PIN">
+        <input type="text" id="newRoomId" placeholder="Room Name">
+        <input type="password" id="newRoomPass" placeholder="PIN">
         <button class="btn" onclick="createNewRoom()">CREATE</button>
-        <p onclick="closeModals()" style="color:gray; cursor:pointer; margin-top:15px;">Back</p>
+        <p onclick="closeModals()" style="color:gray; cursor:pointer;">Back</p>
     </div>
 
     <div id="join-modal" class="overlay hidden">
-        <h3>Join Room</h3>
-        <p id="target-room-name"></p>
-        <input type="password" id="joinPinInput" placeholder="Enter PIN">
-        <button class="btn" style="background:#2d6a4f;" onclick="verifyAndJoin()">JOIN</button>
-        <p onclick="closeModals()" style="color:gray; cursor:pointer; margin-top:15px;">Cancel</p>
+        <h3>Enter PIN</h3>
+        <input type="password" id="joinPinInput" placeholder="Room PIN">
+        <button class="btn" onclick="verifyAndJoin()">JOIN</button>
+        <p onclick="closeModals()" style="color:gray; cursor:pointer;">Cancel</p>
     </div>
 
     <div id="game-section" class="hidden" style="height:100%; display:flex; flex-direction:column;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <button id="close-room-btn" class="hidden" onclick="closeRoom()" style="color:red; border:none; background:none; font-size:10px;">CLOSE ROOM</button>
-            <div id="round-info" style="font-weight:bold; color:var(--primary); background:var(--gold); padding:2px 10px; border-radius:10px;">Round: 1/11</div>
-            <button onclick="leaveRoom()" style="color:gray; border:none; background:none; font-size:10px;">LEAVE</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div id="round-info" style="font-weight:bold; color:var(--p);">Round: 1/11</div>
+            <button onclick="leaveRoom()" style="font-size:10px; border:none; background:none; color:gray;">LEAVE</button>
         </div>
-        <div id="lobby-ui" style="text-align:center; padding-top:20px;">
+        <div id="lobby-ui" style="text-align:center;">
             <h3 id="room-title"></h3>
-            <div id="p-list" style="margin:20px 0; font-weight:bold; font-size:18px;"></div>
+            <div id="p-list" style="margin:20px 0;"></div>
             <button id="start-btn" class="btn hidden" onclick="hostStart()">START GAME 🚀</button>
         </div>
         <div id="play-ui" class="hidden" style="height:100%; display:flex; flex-direction:column;">
             <div class="scoreboard" id="scoreboard"></div>
-            <div id="status-txt" style="text-align:center; font-weight:bold; font-size:14px; margin-bottom:10px;">-</div>
+            <div id="status-txt" style="text-align:center; font-size:13px; margin-bottom:10px; font-weight:bold;"></div>
             <div id="grid" class="grid"></div>
         </div>
     </div>
 
-    <div id="round-overlay" class="overlay game-overlay hidden">
+    <div id="round-overlay" class="overlay hidden final-overlay">
         <h1 id="r-winner"></h1>
         <div id="final-controls" class="hidden">
-            <button class="btn" style="background:var(--gold); color:black;" onclick="hostResetGame()">PLAY AGAIN 🔄</button>
+            <button id="reset-btn" class="btn" style="background:var(--g); color:black;" onclick="hostReset()">PLAY AGAIN 🔄</button>
             <button class="btn" style="margin-top:10px; background:transparent; border:1px solid white;" onclick="leaveRoom()">HOME</button>
         </div>
     </div>
 </div>
 
-<audio id="snd-eat" src="https://assets.mixkit.co/active_storage/sfx/2205/2205-preview.mp3"></audio>
-<audio id="snd-poison" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // Firebase Config
+    // Firebase configuration yahan halnus
     const firebaseConfig = { apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
   authDomain: "poison-and-save.firebaseapp.com",
   databaseURL: "https://poison-and-save-default-rtdb.firebaseio.com",
@@ -103,184 +97,152 @@
     let myRole, myName, selectedId, gameData = {};
 
     window.onload = () => {
-        const r = localStorage.getItem('selectedId'), rl = localStorage.getItem('myRole'), n = localStorage.getItem('pName');
+        const r = localStorage.getItem('sId'), rl = localStorage.getItem('mRl'), n = localStorage.getItem('pNm');
         if(n) document.getElementById('playerName').value = n;
         if(r && rl) { selectedId = r; myRole = rl; myName = n; enterRoom(); }
-        
+
         onValue(ref(db, 'rooms'), (snap) => {
-            const list = document.getElementById('active-rooms-list'), rooms = snap.val();
+            const list = document.getElementById('active-rooms-list');
             list.innerHTML = "";
-            if(!rooms) return list.innerHTML = "No rooms.";
+            const rooms = snap.val();
+            if(!rooms) { list.innerHTML = "No active rooms."; return; }
             Object.keys(rooms).forEach(id => {
-                if(rooms[id].state === "waiting") list.innerHTML += `<div class="room-card"><div><b>${id.toUpperCase()}</b><br><small>${rooms[id].playerCount}/4 Players</small></div><button class="btn" style="width:70px; padding:6px; font-size:11px;" onclick="openJoinModal('${id}')">JOIN</button></div>`;
+                if(rooms[id] && rooms[id].state === "waiting") {
+                    list.innerHTML += `<div class="room-card">
+                        <div><b>${id.toUpperCase()}</b><br><small>${rooms[id].playerCount}/4 Players</small></div>
+                        <button class="btn" style="width:70px; padding:5px; font-size:11px;" onclick="openJoin('${id}')">JOIN</button>
+                    </div>`;
+                }
             });
         });
     };
 
-    window.leaveRoom = () => { localStorage.removeItem('selectedId'); localStorage.removeItem('myRole'); location.reload(); };
-    window.showCreateModal = () => document.getElementById('create-modal').classList.remove('hidden');
+    window.openCreate = () => document.getElementById('create-modal').classList.remove('hidden');
+    window.openJoin = (id) => { selectedId = id; document.getElementById('join-modal').classList.remove('hidden'); };
     window.closeModals = () => { document.getElementById('create-modal').classList.add('hidden'); document.getElementById('join-modal').classList.add('hidden'); };
+    window.leaveRoom = () => { localStorage.clear(); location.reload(); };
 
     window.createNewRoom = () => {
         const id = document.getElementById('newRoomId').value.trim().toLowerCase(), pin = document.getElementById('newRoomPass').value.trim();
         myName = document.getElementById('playerName').value.trim();
         if(!id || !pin || !myName) return alert("Fill all fields!");
         myRole = "p1"; selectedId = id;
-        localStorage.setItem('pName', myName); localStorage.setItem('selectedId', id); localStorage.setItem('myRole', 'p1');
+        localStorage.setItem('pNm', myName); localStorage.setItem('sId', id); localStorage.setItem('mRl', 'p1');
         set(ref(db, 'rooms/'+id), { state:"waiting", pin:pin, playerCount:1, p1_name:myName, round:1, startPlayer:1, p1_score:0, p2_score:0, p3_score:0, p4_score:0 });
         enterRoom();
     };
 
-    window.openJoinModal = (id) => { selectedId = id; document.getElementById('target-room-name').innerText = "Joining: "+id; document.getElementById('join-modal').classList.remove('hidden'); };
-
     window.verifyAndJoin = async () => {
         const pin = document.getElementById('joinPinInput').value.trim(); myName = document.getElementById('playerName').value.trim();
-        const snap = await get(ref(db, 'rooms/'+selectedId));
-        if(snap.val().pin === pin) {
-            const count = snap.val().playerCount + 1;
-            myRole = "p"+count;
-            localStorage.setItem('selectedId', selectedId); localStorage.setItem('myRole', myRole); localStorage.setItem('pName', myName);
-            update(ref(db, 'rooms/'+selectedId), { [`p${count}_name`]:myName, playerCount:count });
+        const s = await get(ref(db, 'rooms/'+selectedId));
+        if(s.exists() && s.val().pin === pin) {
+            const c = s.val().playerCount + 1; myRole = "p"+c;
+            localStorage.setItem('sId', selectedId); localStorage.setItem('mRl', myRole); localStorage.setItem('pNm', myName);
+            update(ref(db, 'rooms/'+selectedId), { [`p${c}_name`]:myName, playerCount:c });
             enterRoom();
         } else alert("Wrong PIN!");
     };
 
     function enterRoom() {
         closeModals(); document.getElementById('hub-screen').classList.add('hidden'); document.getElementById('game-section').classList.remove('hidden');
-        if(myRole === 'p1') document.getElementById('close-room-btn').classList.remove('hidden');
-        
         onValue(ref(db, 'rooms/'+selectedId), (snap) => {
             gameData = snap.val();
             if(!gameData) return leaveRoom();
             document.getElementById('room-title').innerText = selectedId.toUpperCase();
             let phtml = ""; for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) phtml += "👤 "+gameData[`p${i}_name`]+"<br>";
             document.getElementById('p-list').innerHTML = phtml;
-            
-            if(myRole === 'p1' && gameData.playerCount >= 2 && gameData.state === 'waiting') document.getElementById('start-btn').classList.remove('hidden');
-            else document.getElementById('start-btn').classList.add('hidden');
-            
+            if(myRole==='p1' && gameData.playerCount>=2 && gameData.state==='waiting') document.getElementById('start-btn').classList.remove('hidden');
             if(gameData.state !== "waiting") {
                 document.getElementById('lobby-ui').classList.add('hidden');
                 document.getElementById('play-ui').classList.remove('hidden');
-                updateGameUI();
+                syncUI();
             }
         });
     }
 
-    function updateGameUI() {
+    function syncUI() {
         const sb = document.getElementById('scoreboard'); sb.style.gridTemplateColumns = `repeat(${gameData.playerCount}, 1fr)`; sb.innerHTML = "";
-        for(let i=1; i<=gameData.playerCount; i++){
+        for(let i=1; i<=gameData.playerCount; i++) {
             const active = gameData.turn === `p${i}` && (gameData.state === "playing" || gameData.state === "selecting");
-            sb.innerHTML += `<div class="player-slot ${active?'active-turn':''}"><div>${gameData[`p${i}_name`]}</div><div style="font-size:18px; font-weight:bold; color:var(--gold)">${gameData[`p${i}_score`]||0}</div></div>`;
+            sb.innerHTML += `<div class="player-slot ${active?'active-turn':''}"><b>${gameData[`p${i}_name`]}</b><br>${gameData[`p${i}_score`]||0}</div>`;
         }
         document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
-        
         const st = document.getElementById('status-txt');
-        if(gameData.state === "selecting") {
-            st.innerText = gameData[myRole+"_poison"] !== undefined ? "⏳ Waiting for others..." : "💀 CHOOSE YOUR POISON!";
-        } else {
-            st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + gameData[gameData.turn+"_name"] + " is picking...";
-        }
+        if(gameData.state === "selecting") st.innerText = gameData[myRole+"_p"] !== undefined ? "⏳ Waiting for others..." : "💀 SELECT YOUR POISON!";
+        else st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + gameData[gameData.turn+"_name"]+"'s turn";
 
-        if(document.getElementById('grid').innerHTML==="") createGrid();
+        if(document.getElementById('grid').innerHTML==="") {
+            const g = document.getElementById('grid'); g.innerHTML = "";
+            for(let i=0; i<12; i++) {
+                let d = document.createElement('div'); d.className='candy'; d.id="c-"+i; d.innerHTML="🍫";
+                d.onclick=()=>handleMove(i); g.appendChild(d);
+            }
+        }
         for(let i=0; i<12; i++) {
             const el = document.getElementById("c-"+i);
-            if(gameData.state === "selecting") { el.classList.remove('red-hit'); el.classList.remove('removed'); }
+            if(gameData.state === "selecting") { el.classList.remove('red-hit', 'removed'); }
             else { 
                 if(gameData[`rem_${i}`]) el.classList.add('removed'); 
                 else { el.classList.remove('removed'); el.classList.remove('red-hit'); }
             }
         }
-        
         const ov = document.getElementById('round-overlay');
-        if(gameData.state === "round_ended") {
-            ov.classList.remove('hidden');
-            document.getElementById('r-winner').innerHTML = `<span style="font-size:18px">ROUND ${gameData.round-1} WINNER</span><br>⭐ ${gameData.last_win} ⭐`;
-        } else if(gameData.state === "final_ended") {
-            ov.classList.remove('hidden');
-            document.getElementById('r-winner').innerHTML = `🏆 CHAMPION 🏆<br>${gameData.champion}`;
+        if(gameData.state === "round_ended") { 
+            ov.classList.remove('hidden'); document.getElementById('r-winner').innerText = gameData.last_win + " Wins!"; 
+            document.getElementById('final-controls').classList.add('hidden');
+        } else if(gameData.state === "final_ended") { 
+            ov.classList.remove('hidden'); document.getElementById('r-winner').innerHTML = "🏆 CHAMPION 🏆<br>" + gameData.champ;
             if(myRole === 'p1') document.getElementById('final-controls').classList.remove('hidden');
-            launchConfetti();
-        } else {
-            ov.classList.add('hidden');
-        }
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        } else { ov.classList.add('hidden'); }
     }
 
-    function launchConfetti() {
-        var end = Date.now() + (4 * 1000);
-        (function frame() {
-            confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#fcbf49', '#780000'] });
-            confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#fcbf49', '#780000'] });
-            if (Date.now() < end) requestAnimationFrame(frame);
-        }());
-    }
-
-    window.hostStart = () => update(ref(db, 'rooms/'+selectedId), { state:"selecting", turn:"p1", startPlayer: 1 });
-    window.closeRoom = () => { if(confirm("Close room for everyone?")) { remove(ref(db, 'rooms/'+selectedId)); leaveRoom(); } };
-    
-    window.hostResetGame = () => {
-        let r = { state: "selecting", turn: "p1", round: 1, startPlayer: 1, champion: null };
-        for(let i=1; i<=4; i++) { r[`p${i}_score`] = 0; r[`p${i}_poison`] = null; }
-        for(let i=0; i<12; i++) r[`rem_${i}`] = null;
-        update(ref(db, 'rooms/'+selectedId), r);
-    };
-
-    function createGrid() {
-        const g = document.getElementById('grid'); g.innerHTML = "";
-        for(let i=0; i<12; i++){
-            let d = document.createElement('div'); d.className='candy'; d.id="c-"+i; d.innerHTML="🍫";
-            d.onclick=()=>handleMove(i); g.appendChild(d);
-        }
-    }
+    window.hostStart = () => update(ref(db, 'rooms/'+selectedId), { state:"selecting", turn:"p1" });
 
     function handleMove(i) {
         const rRef = ref(db, 'rooms/'+selectedId);
-        if(gameData.state === "selecting" && gameData[myRole+"_poison"] === undefined) {
-            if(navigator.vibrate) navigator.vibrate(50);
+        if(gameData.state === "selecting" && gameData[myRole+"_p"] === undefined) {
             document.getElementById("c-"+i).classList.add('red-hit');
-            
-            // Fixed Selection Guard for Round 8 Issue
-            update(rRef, {[myRole+"_poison"]:i}).then(() => {
-                get(rRef).then(snap => {
-                    let d = snap.val(), ready = 0;
-                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_poison`] !== undefined) ready++;
-                    if(ready === d.playerCount) update(rRef, { state: "playing" });
+            update(rRef, {[myRole+"_p"]:i}).then(() => {
+                get(rRef).then(s => {
+                    let d = s.val(), all = true;
+                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_p`] === undefined) all = false;
+                    if(all) update(rRef, { state: "playing" });
                 });
             });
         } else if(gameData.state === "playing" && gameData.turn === myRole) {
             if(gameData[`rem_${i}`]) return;
-            let isP = false; for(let j=1; j<=gameData.playerCount; j++) if(i === gameData[`p${j}_poison`]) isP = true;
-            
+            let isP = false; for(let j=1; j<=gameData.playerCount; j++) if(i === gameData[`p${j}_p`]) isP = true;
             if(isP) {
-                if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                document.getElementById('snd-poison').play();
                 document.getElementById("c-"+i).classList.add('red-hit');
+                let cur = parseInt(myRole.replace("p", "")), wIdx = cur - 1 || gameData.playerCount;
+                const w = "p"+wIdx, nextR = gameData.round + 1;
+                update(rRef, { state:"round_ended", last_win: gameData[w+"_name"], [w+"_score"]:(gameData[w+"_score"]||0)+1 });
                 setTimeout(() => {
-                    let cur = parseInt(myRole.replace("p", "")), winIdx = cur - 1; if(winIdx < 1) winIdx = gameData.playerCount;
-                    const w = "p"+winIdx, nextR = gameData.round + 1;
-                    update(rRef, { state:"round_ended", last_win: gameData[w+"_name"], [w+"_score"]:(gameData[w+"_score"]||0)+1 });
-                    
-                    setTimeout(() => {
-                        if(nextR > 11) {
-                            let champ = "", ms = -1;
-                            for(let k=1; k<=gameData.playerCount; k++) if(gameData[`p${k}_score`] > ms) { ms = gameData[`p${k}_score`]; champ = gameData[`p${k}_name`]; }
-                            update(rRef, { state:"final_ended", champion: champ });
-                        } else {
-                            let nextS = (gameData.startPlayer || 1) + 1; if(nextS > gameData.playerCount) nextS = 1;
-                            let res = { state:"selecting", turn: "p"+nextS, startPlayer: nextS, round: nextR };
-                            for(let k=1; k<=4; k++) res[`p${k}_poison`] = null;
-                            for(let k=0; k<12; k++) res[`rem_${k}`] = null;
-                            update(rRef, res);
-                        }
-                    }, 2500);
-                }, 600);
+                    if(nextR > 11) {
+                        let ch="", ms=-1; for(let k=1; k<=gameData.playerCount; k++) if(gameData[`p${k}_score`]>ms){ ms=gameData[`p${k}_score`]; ch=gameData[`p${k}_name`]; }
+                        update(rRef, { state:"final_ended", champ: ch });
+                    } else {
+                        let ns = (gameData.startPlayer || 1) % gameData.playerCount + 1;
+                        let reset = { state:"selecting", turn: "p"+ns, startPlayer: ns, round: nextR };
+                        for(let k=1; k<=4; k++) reset[`p${k}_p`] = null;
+                        for(let k=0; k<12; k++) reset[`rem_${k}`] = null;
+                        update(rRef, reset);
+                    }
+                }, 2000);
             } else {
-                document.getElementById('snd-eat').play();
-                let cur = parseInt(myRole.replace("p", "")), next = cur + 1; if(next > gameData.playerCount) next = 1;
+                let next = parseInt(myRole.replace("p", "")) % gameData.playerCount + 1;
                 update(rRef, { turn: "p"+next, [`rem_${i}`]: true });
             }
         }
     }
+
+    window.hostReset = () => {
+        let r = { state: "selecting", turn: "p1", round: 1, startPlayer: 1, champ: null };
+        for(let i=1; i<=4; i++) { r[`p${i}_score`] = 0; r[`p${i}_p`] = null; }
+        for(let i=0; i<12; i++) r[`rem_${i}`] = null;
+        update(ref(db, 'rooms/'+selectedId), r);
+    };
 </script>
 </body>
 </html>
