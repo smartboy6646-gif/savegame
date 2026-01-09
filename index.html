@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Poison & Save: Anti-Refresh</title>
+    <title>Poison & Save: Ultimate Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --primary: #780000; --bg: #fdf0d5; --accent: #003049; --gold: #fcbf49; --red-flash: #ff4d4d; }
@@ -11,7 +11,8 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         #game-container { width: 95%; max-width: 400px; height: 92vh; background: white; padding: 15px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; display: flex; flex-direction: column; }
         input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; font-size: 16px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn:active { transform: scale(0.98); }
         .room-card { background: #f8f9fa; padding: 10px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); }
         .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:white; z-index: 2000; padding: 25px; text-align:center; border-radius: 25px; display: flex; flex-direction: column; justify-content: center; }
         .scoreboard { display: grid; gap: 8px; background: var(--accent); color: white; padding: 10px; border-radius: 15px; margin-bottom: 10px; }
@@ -20,7 +21,8 @@
         .active-turn { animation: neonGlow 1.5s infinite ease-in-out; background: rgba(252, 191, 73, 0.2); }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-grow: 1; align-content: center; }
         .candy { aspect-ratio: 1/1; font-size: 40px; background: #fff; border: 2px solid #f0f0f0; border-radius: 15px; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 4px 0 #ddd; cursor: pointer; }
-        .red-hit { background: var(--red-flash) !important; border-color: white !important; box-shadow: none; }
+        .red-hit { background: var(--red-flash) !important; border-color: white !important; box-shadow: none; animation: shake 0.3s; }
+        @keyframes shake { 0%,100% {transform:translateX(0)} 25% {transform:translateX(-5px)} 75% {transform:translateX(5px)} }
         .removed { visibility: hidden; opacity: 0; pointer-events: none; }
         .hidden { display: none !important; }
         .game-overlay { background: rgba(0,0,0,0.92); color: white; z-index: 3000; }
@@ -33,9 +35,7 @@
         <h2 style="text-align:center; color:var(--primary);">🍫 Poison & Save</h2>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
         <button class="btn" style="background:var(--accent);" onclick="showCreateModal()">+ CREATE NEW ROOM</button>
-        <div style="margin-top:20px; height: 320px; overflow-y: auto;">
-            <div id="active-rooms-list">Scanning Rooms...</div>
-        </div>
+        <div style="margin-top:20px; height: 320px; overflow-y: auto;"><div id="active-rooms-list">Scanning...</div></div>
     </div>
 
     <div id="create-modal" class="overlay hidden">
@@ -81,13 +81,14 @@
     </div>
 </div>
 
-<audio id="snd-eat" src="https://cdn.discordapp.com/attachments/1420003318096461825/1458783471177564282/copy_787A93B7-6439-44E4-B5C6-71E4DB2F2955.mp3?ex=696236fa&is=6960e57a&hm=578701c9ed1e1e5852c05cde8460cf3423a6d072876d8a73283066785ea9d7bc&"></audio>
-<audio id="snd-poison" src="https://cdn.discordapp.com/attachments/1420003318096461825/1458766850161905675/myinstants_2.mp3?ex=6962277f&is=6960d5ff&hm=f1337f51b6dbe3255df35ff801313e03f20929a952588cbeed815728998551de&"></audio>
+<audio id="snd-eat" src="https://assets.mixkit.co/active_storage/sfx/2205/2205-preview.mp3"></audio>
+<audio id="snd-poison" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+    // Firebase Config
     const firebaseConfig = { apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
   authDomain: "poison-and-save.firebaseapp.com",
   databaseURL: "https://poison-and-save-default-rtdb.firebaseio.com",
@@ -101,50 +102,31 @@
 
     let myRole, myName, selectedId, gameData = {};
 
-    // 1. AUTO-RECONNECT LOGIC ON LOAD
     window.onload = () => {
-        const savedRoom = localStorage.getItem('selectedId');
-        const savedRole = localStorage.getItem('myRole');
-        const n = localStorage.getItem('pName');
-        
+        const r = localStorage.getItem('selectedId'), rl = localStorage.getItem('myRole'), n = localStorage.getItem('pName');
         if(n) document.getElementById('playerName').value = n;
+        if(r && rl) { selectedId = r; myRole = rl; myName = n; enterRoom(); }
         
-        if(savedRoom && savedRole) {
-            selectedId = savedRoom;
-            myRole = savedRole;
-            enterRoom();
-        }
-
         onValue(ref(db, 'rooms'), (snap) => {
-            const list = document.getElementById('active-rooms-list'); list.innerHTML = "";
-            const rooms = snap.val();
+            const list = document.getElementById('active-rooms-list'), rooms = snap.val();
+            list.innerHTML = "";
             if(!rooms) return list.innerHTML = "No rooms.";
             Object.keys(rooms).forEach(id => {
-                if(rooms[id].state === "waiting") {
-                    list.innerHTML += `<div class="room-card">
-                        <div><b>${id.toUpperCase()}</b><br><small>${rooms[id].playerCount}/4 Players</small></div>
-                        <button class="btn" style="width:70px; padding:6px; font-size:11px;" onclick="openJoinModal('${id}')">JOIN</button>
-                    </div>`;
-                }
+                if(rooms[id].state === "waiting") list.innerHTML += `<div class="room-card"><div><b>${id.toUpperCase()}</b><br><small>${rooms[id].playerCount}/4 Players</small></div><button class="btn" style="width:70px; padding:6px; font-size:11px;" onclick="openJoinModal('${id}')">JOIN</button></div>`;
             });
         });
     };
 
-    window.leaveRoom = () => {
-        localStorage.removeItem('selectedId');
-        localStorage.removeItem('myRole');
-        location.reload();
-    };
+    window.leaveRoom = () => { localStorage.removeItem('selectedId'); localStorage.removeItem('myRole'); location.reload(); };
+    window.showCreateModal = () => document.getElementById('create-modal').classList.remove('hidden');
+    window.closeModals = () => { document.getElementById('create-modal').classList.add('hidden'); document.getElementById('join-modal').classList.add('hidden'); };
 
     window.createNewRoom = () => {
-        const id = document.getElementById('newRoomId').value.trim().toLowerCase();
-        const pin = document.getElementById('newRoomPass').value.trim();
+        const id = document.getElementById('newRoomId').value.trim().toLowerCase(), pin = document.getElementById('newRoomPass').value.trim();
         myName = document.getElementById('playerName').value.trim();
         if(!id || !pin || !myName) return alert("Fill all fields!");
         myRole = "p1"; selectedId = id;
-        localStorage.setItem('pName', myName);
-        localStorage.setItem('selectedId', id);
-        localStorage.setItem('myRole', 'p1');
+        localStorage.setItem('pName', myName); localStorage.setItem('selectedId', id); localStorage.setItem('myRole', 'p1');
         set(ref(db, 'rooms/'+id), { state:"waiting", pin:pin, playerCount:1, p1_name:myName, round:1, startPlayer:1, p1_score:0, p2_score:0, p3_score:0, p4_score:0 });
         enterRoom();
     };
@@ -152,39 +134,31 @@
     window.openJoinModal = (id) => { selectedId = id; document.getElementById('target-room-name').innerText = "Joining: "+id; document.getElementById('join-modal').classList.remove('hidden'); };
 
     window.verifyAndJoin = async () => {
-        const pin = document.getElementById('joinPinInput').value.trim();
-        myName = document.getElementById('playerName').value.trim();
+        const pin = document.getElementById('joinPinInput').value.trim(); myName = document.getElementById('playerName').value.trim();
         const snap = await get(ref(db, 'rooms/'+selectedId));
         if(snap.val().pin === pin) {
             const count = snap.val().playerCount + 1;
             myRole = "p"+count;
-            localStorage.setItem('selectedId', selectedId);
-            localStorage.setItem('myRole', myRole);
+            localStorage.setItem('selectedId', selectedId); localStorage.setItem('myRole', myRole); localStorage.setItem('pName', myName);
             update(ref(db, 'rooms/'+selectedId), { [`p${count}_name`]:myName, playerCount:count });
-            localStorage.setItem('pName', myName);
             enterRoom();
         } else alert("Wrong PIN!");
     };
 
-    // Rest of the logic (enterRoom, handleMove, updateGameUI) remains the same
-    // Just ensuring localStorage is checked inside enterRoom
     function enterRoom() {
-        closeModals();
-        document.getElementById('hub-screen').classList.add('hidden');
-        document.getElementById('game-section').classList.remove('hidden');
+        closeModals(); document.getElementById('hub-screen').classList.add('hidden'); document.getElementById('game-section').classList.remove('hidden');
         if(myRole === 'p1') document.getElementById('close-room-btn').classList.remove('hidden');
-
+        
         onValue(ref(db, 'rooms/'+selectedId), (snap) => {
             gameData = snap.val();
-            if(!gameData) {
-                leaveRoom();
-                return;
-            }
+            if(!gameData) return leaveRoom();
             document.getElementById('room-title').innerText = selectedId.toUpperCase();
             let phtml = ""; for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) phtml += "👤 "+gameData[`p${i}_name`]+"<br>";
             document.getElementById('p-list').innerHTML = phtml;
+            
             if(myRole === 'p1' && gameData.playerCount >= 2 && gameData.state === 'waiting') document.getElementById('start-btn').classList.remove('hidden');
             else document.getElementById('start-btn').classList.add('hidden');
+            
             if(gameData.state !== "waiting") {
                 document.getElementById('lobby-ui').classList.add('hidden');
                 document.getElementById('play-ui').classList.remove('hidden');
@@ -194,64 +168,61 @@
     }
 
     function updateGameUI() {
-        const sb = document.getElementById('scoreboard');
-        sb.style.gridTemplateColumns = `repeat(${gameData.playerCount}, 1fr)`;
-        sb.innerHTML = "";
+        const sb = document.getElementById('scoreboard'); sb.style.gridTemplateColumns = `repeat(${gameData.playerCount}, 1fr)`; sb.innerHTML = "";
         for(let i=1; i<=gameData.playerCount; i++){
             const active = gameData.turn === `p${i}` && (gameData.state === "playing" || gameData.state === "selecting");
-            sb.innerHTML += `<div class="player-slot ${active?'active-turn':''}">
-                <div style="font-size:10px;">${gameData[`p${i}_name`]}</div>
-                <div style="font-size:18px; font-weight:bold;">${gameData[`p${i}_score`]||0}</div>
-            </div>`;
+            sb.innerHTML += `<div class="player-slot ${active?'active-turn':''}"><div>${gameData[`p${i}_name`]}</div><div style="font-size:18px; font-weight:bold; color:var(--gold)">${gameData[`p${i}_score`]||0}</div></div>`;
         }
         document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
+        
         const st = document.getElementById('status-txt');
         if(gameData.state === "selecting") {
-            st.innerText = gameData[myRole+"_poison"] !== undefined ? "Waiting for others..." : "CHOOSE YOUR POISON 💀";
+            st.innerText = gameData[myRole+"_poison"] !== undefined ? "⏳ Waiting for others..." : "💀 CHOOSE YOUR POISON!";
         } else {
-            st.innerText = gameData.turn === myRole ? "👉 YOUR TURN" : gameData[gameData.turn+"_name"] + "'s turn...";
+            st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + gameData[gameData.turn+"_name"] + " is picking...";
         }
 
         if(document.getElementById('grid').innerHTML==="") createGrid();
         for(let i=0; i<12; i++) {
             const el = document.getElementById("c-"+i);
-            if(gameData.state === "selecting") {
-                el.classList.remove('red-hit');
-                el.classList.remove('removed');
-            } else {
-                if(gameData[`rem_${i}`]) el.classList.add('removed');
-                else {
-                    el.classList.remove('removed');
-                    el.classList.remove('red-hit'); // To clear selection from previous rounds
-                }
+            if(gameData.state === "selecting") { el.classList.remove('red-hit'); el.classList.remove('removed'); }
+            else { 
+                if(gameData[`rem_${i}`]) el.classList.add('removed'); 
+                else { el.classList.remove('removed'); el.classList.remove('red-hit'); }
             }
         }
-
+        
         const ov = document.getElementById('round-overlay');
         if(gameData.state === "round_ended") {
             ov.classList.remove('hidden');
-            document.getElementById('r-winner').innerText = gameData.last_win + " Wins!";
+            document.getElementById('r-winner').innerHTML = `<span style="font-size:18px">ROUND ${gameData.round-1} WINNER</span><br>⭐ ${gameData.last_win} ⭐`;
         } else if(gameData.state === "final_ended") {
             ov.classList.remove('hidden');
             document.getElementById('r-winner').innerHTML = `🏆 CHAMPION 🏆<br>${gameData.champion}`;
             if(myRole === 'p1') document.getElementById('final-controls').classList.remove('hidden');
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            launchConfetti();
         } else {
             ov.classList.add('hidden');
         }
     }
 
-    // hostStart, createGrid, handleMove functions are identical to previous correct version...
+    function launchConfetti() {
+        var end = Date.now() + (4 * 1000);
+        (function frame() {
+            confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#fcbf49', '#780000'] });
+            confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#fcbf49', '#780000'] });
+            if (Date.now() < end) requestAnimationFrame(frame);
+        }());
+    }
+
     window.hostStart = () => update(ref(db, 'rooms/'+selectedId), { state:"selecting", turn:"p1", startPlayer: 1 });
-    window.closeModals = () => { document.getElementById('create-modal').classList.add('hidden'); document.getElementById('join-modal').classList.add('hidden'); };
-    window.showCreateModal = () => document.getElementById('create-modal').classList.remove('hidden');
-    window.closeRoom = () => { if(confirm("Close room?")) { remove(ref(db, 'rooms/'+selectedId)); leaveRoom(); } };
+    window.closeRoom = () => { if(confirm("Close room for everyone?")) { remove(ref(db, 'rooms/'+selectedId)); leaveRoom(); } };
     
     window.hostResetGame = () => {
-        let reset = { state: "selecting", turn: "p1", round: 1, startPlayer: 1, champion: null };
-        for(let i=1; i<=4; i++) { reset[`p${i}_score`] = 0; reset[`p${i}_poison`] = null; }
-        for(let i=0; i<12; i++) reset[`rem_${i}`] = null;
-        update(ref(db, 'rooms/'+selectedId), reset);
+        let r = { state: "selecting", turn: "p1", round: 1, startPlayer: 1, champion: null };
+        for(let i=1; i<=4; i++) { r[`p${i}_score`] = 0; r[`p${i}_poison`] = null; }
+        for(let i=0; i<12; i++) r[`rem_${i}`] = null;
+        update(ref(db, 'rooms/'+selectedId), r);
     };
 
     function createGrid() {
@@ -265,37 +236,37 @@
     function handleMove(i) {
         const rRef = ref(db, 'rooms/'+selectedId);
         if(gameData.state === "selecting" && gameData[myRole+"_poison"] === undefined) {
+            if(navigator.vibrate) navigator.vibrate(50);
             document.getElementById("c-"+i).classList.add('red-hit');
-            setTimeout(() => { 
-                update(rRef, {[myRole+"_poison"]:i});
-                get(rRef).then(s => {
-                    let d = s.val(); let all = true;
-                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_poison`] === undefined) all = false;
-                    if(all) update(rRef, { state: "playing" });
+            
+            // Fixed Selection Guard for Round 8 Issue
+            update(rRef, {[myRole+"_poison"]:i}).then(() => {
+                get(rRef).then(snap => {
+                    let d = snap.val(), ready = 0;
+                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_poison`] !== undefined) ready++;
+                    if(ready === d.playerCount) update(rRef, { state: "playing" });
                 });
-            }, 500);
+            });
         } else if(gameData.state === "playing" && gameData.turn === myRole) {
             if(gameData[`rem_${i}`]) return;
             let isP = false; for(let j=1; j<=gameData.playerCount; j++) if(i === gameData[`p${j}_poison`]) isP = true;
+            
             if(isP) {
+                if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
                 document.getElementById('snd-poison').play();
                 document.getElementById("c-"+i).classList.add('red-hit');
                 setTimeout(() => {
-                    let curNum = parseInt(myRole.replace("p", ""));
-                    let winIdx = curNum - 1; if(winIdx < 1) winIdx = gameData.playerCount;
-                    const w = "p"+winIdx; const nextR = gameData.round + 1;
+                    let cur = parseInt(myRole.replace("p", "")), winIdx = cur - 1; if(winIdx < 1) winIdx = gameData.playerCount;
+                    const w = "p"+winIdx, nextR = gameData.round + 1;
                     update(rRef, { state:"round_ended", last_win: gameData[w+"_name"], [w+"_score"]:(gameData[w+"_score"]||0)+1 });
                     
                     setTimeout(() => {
                         if(nextR > 11) {
-                            let champ = ""; let ms = -1;
-                            for(let k=1; k<=gameData.playerCount; k++) {
-                                if(gameData[`p${k}_score`] > ms) { ms = gameData[`p${k}_score`]; champ = gameData[`p${k}_name`]; }
-                            }
+                            let champ = "", ms = -1;
+                            for(let k=1; k<=gameData.playerCount; k++) if(gameData[`p${k}_score`] > ms) { ms = gameData[`p${k}_score`]; champ = gameData[`p${k}_name`]; }
                             update(rRef, { state:"final_ended", champion: champ });
                         } else {
-                            let lastS = gameData.startPlayer || 1;
-                            let nextS = lastS + 1; if(nextS > gameData.playerCount) nextS = 1;
+                            let nextS = (gameData.startPlayer || 1) + 1; if(nextS > gameData.playerCount) nextS = 1;
                             let res = { state:"selecting", turn: "p"+nextS, startPlayer: nextS, round: nextR };
                             for(let k=1; k<=4; k++) res[`p${k}_poison`] = null;
                             for(let k=0; k<12; k++) res[`rem_${k}`] = null;
@@ -305,8 +276,7 @@
                 }, 600);
             } else {
                 document.getElementById('snd-eat').play();
-                let cur = parseInt(myRole.replace("p", ""));
-                let next = cur + 1; if(next > gameData.playerCount) next = 1;
+                let cur = parseInt(myRole.replace("p", "")), next = cur + 1; if(next > gameData.playerCount) next = 1;
                 update(rRef, { turn: "p"+next, [`rem_${i}`]: true });
             }
         }
