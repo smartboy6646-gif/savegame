@@ -12,14 +12,12 @@
         #game-container { width: 95%; max-width: 400px; height: 92vh; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; display: flex; flex-direction: column; }
         input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 10px; text-align: center; font-size: 16px; }
         .btn { background: var(--p); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
-        .room-card { background: #f8f9fa; padding: 12px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--p); }
-        .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:white; z-index: 2000; padding: 20px; text-align:center; display: flex; flex-direction: column; justify-content: center; border-radius: 20px; }
         .scoreboard { display: grid; gap: 5px; background: var(--acc); color: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; }
         .player-slot { padding: 5px; border-radius: 8px; text-align: center; font-size: 12px; transition: 0.3s; }
-        .active-turn { border: 2px solid var(--g); background: rgba(252, 191, 73, 0.3); transform: scale(1.05); }
+        .active-turn { border: 2px solid var(--g); background: rgba(252, 191, 73, 0.3); transform: scale(1.05); box-shadow: 0 0 10px var(--g); }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-grow: 1; align-content: center; }
         .candy { aspect-ratio: 1/1; font-size: 35px; background: #fff; border: 1px solid #eee; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 #ddd; cursor: pointer; }
-        .red-hit { background: #ff4d4d !important; border: none; box-shadow: none; transform: scale(0.9); }
+        .red-hit { background: #ff4d4d !important; border: none; transform: scale(0.9); }
         .removed { visibility: hidden; pointer-events: none; }
         .hidden { display: none !important; }
     </style>
@@ -30,12 +28,8 @@
     <div id="hub-screen">
         <h2 style="text-align:center; color:var(--p);">🍫 Poison & Save</h2>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <div style="display:flex; gap:10px;">
-            <input type="text" id="targetRoomId" placeholder="Room ID">
-            <button class="btn" style="width:100px; background:var(--acc);" onclick="handleJoin()">JOIN</button>
-        </div>
-        <p style="text-align:center; margin: 10px 0; color: gray;">OR</p>
-        <button class="btn" onclick="handleCreate()">+ CREATE NEW ROOM</button>
+        <input type="text" id="targetRoomId" placeholder="Room ID (Ex: khelne)">
+        <button class="btn" style="background:var(--acc);" onclick="handleJoinOrCreate()">JOIN / CREATE ROOM</button>
     </div>
 
     <div id="game-section" class="hidden" style="height:100%; display:flex; flex-direction:column;">
@@ -43,31 +37,30 @@
             <div id="round-info" style="font-weight:bold; color:var(--p); background:var(--g); padding:2px 8px; border-radius:5px;">Round: 1/11</div>
             <button onclick="leaveRoom()" style="font-size:11px; border:none; background:#eee; padding:5px 10px; border-radius:5px;">LEAVE</button>
         </div>
-        <div id="lobby-ui" style="text-align:center; flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
-            <h2 id="room-title"></h2>
-            <div id="p-list" style="margin:20px 0; font-size:20px; font-weight:bold;"></div>
+        <div id="lobby-ui" style="text-align:center;">
+            <div id="p-list" style="margin:20px 0; font-size:18px; font-weight:bold;"></div>
             <button id="start-btn" class="btn hidden" onclick="hostStart()">START GAME 🚀</button>
-            <p id="waiting-msg" style="color:gray;">Waiting for players...</p>
         </div>
         <div id="play-ui" class="hidden" style="height:100%; display:flex; flex-direction:column;">
             <div class="scoreboard" id="scoreboard"></div>
-            <div id="status-txt" style="text-align:center; font-size:14px; margin-bottom:10px; font-weight:bold; color:var(--acc);"></div>
+            <div id="status-txt" style="text-align:center; font-size:14px; margin-bottom:10px; font-weight:bold;"></div>
             <div id="grid" class="grid"></div>
         </div>
     </div>
 
-    <div id="round-overlay" class="overlay hidden" style="background:rgba(0,0,0,0.85); color:white;">
+    <div id="round-overlay" class="hidden" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); color:white; z-index:2000; display:flex; flex-direction:column; justify-content:center; align-items:center; border-radius:20px;">
         <h1 id="r-winner"></h1>
         <div id="final-controls" class="hidden">
-            <button class="btn" style="background:var(--g); color:black;" onclick="hostReset()">PLAY AGAIN 🔄</button>
+            <button class="btn" style="background:var(--g); color:black; width:200px;" onclick="hostReset()">PLAY AGAIN 🔄</button>
         </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+    // Afno Firebase config yaha halnus
     const firebaseConfig = { apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
   authDomain: "poison-and-save.firebaseapp.com",
   databaseURL: "https://poison-and-save-default-rtdb.firebaseio.com",
@@ -82,28 +75,12 @@
     let myRole, myName, selectedId, gameData = {};
 
     window.onload = () => {
-        const savedName = localStorage.getItem('pName');
-        if(savedName) document.getElementById('playerName').value = savedName;
-
-        const r = localStorage.getItem('sId'), rl = localStorage.getItem('mRl');
-        if(r && rl) {
-            selectedId = r; myRole = rl; myName = savedName;
-            enterRoom();
-        }
+        const n = localStorage.getItem('pName'), r = localStorage.getItem('sId'), rl = localStorage.getItem('mRl');
+        if(n) document.getElementById('playerName').value = n;
+        if(r && rl) { selectedId = r; myRole = rl; myName = n; enterRoom(); }
     };
 
-    window.handleCreate = () => {
-        const id = document.getElementById('targetRoomId').value.trim().toLowerCase();
-        myName = document.getElementById('playerName').value.trim();
-        if(!id || !myName) return alert("Naam ra Room ID halnus!");
-        
-        myRole = "p1"; selectedId = id;
-        saveLocal();
-        set(ref(db, 'rooms/'+id), { state:"waiting", playerCount:1, p1_name:myName, round:1, startPlayer:1, p1_score:0, p2_score:0 });
-        enterRoom();
-    };
-
-    window.handleJoin = async () => {
+    window.handleJoinOrCreate = async () => {
         const id = document.getElementById('targetRoomId').value.trim().toLowerCase();
         myName = document.getElementById('playerName').value.trim();
         if(!id || !myName) return alert("Naam ra Room ID halnus!");
@@ -111,37 +88,26 @@
         const s = await get(ref(db, 'rooms/'+id));
         if(s.exists()) {
             const c = s.val().playerCount + 1;
-            if(c > 4) return alert("Room full chha!");
-            myRole = "p"+c; selectedId = id;
-            saveLocal();
+            if(c > 4) return alert("Room full cha!");
+            myRole = "p"+c;
             update(ref(db, 'rooms/'+id), { [`p${c}_name`]:myName, playerCount:c });
-            enterRoom();
-        } else alert("Room vetiyena!");
+        } else {
+            myRole = "p1";
+            set(ref(db, 'rooms/'+id), { state:"waiting", playerCount:1, p1_name:myName, round:1, startPlayer:1, p1_score:0, p2_score:0, p3_score:0, p4_score:0 });
+        }
+        selectedId = id; localStorage.setItem('pName', myName); localStorage.setItem('sId', id); localStorage.setItem('mRl', myRole);
+        enterRoom();
     };
-
-    function saveLocal() {
-        localStorage.setItem('pName', myName);
-        localStorage.setItem('sId', selectedId);
-        localStorage.setItem('mRl', myRole);
-    }
 
     function enterRoom() {
         document.getElementById('hub-screen').classList.add('hidden');
         document.getElementById('game-section').classList.remove('hidden');
-        
         onValue(ref(db, 'rooms/'+selectedId), (snap) => {
             gameData = snap.val();
             if(!gameData) return leaveRoom();
-            
-            document.getElementById('room-title').innerText = "ID: " + selectedId.toUpperCase();
             let phtml = ""; for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) phtml += "👤 "+gameData[`p${i}_name`]+"<br>";
             document.getElementById('p-list').innerHTML = phtml;
-
-            if(myRole==='p1' && gameData.playerCount>=2 && gameData.state==='waiting') {
-                document.getElementById('start-btn').classList.remove('hidden');
-                document.getElementById('waiting-msg').classList.add('hidden');
-            }
-
+            if(myRole==='p1' && gameData.playerCount>=2 && gameData.state==='waiting') document.getElementById('start-btn').classList.remove('hidden');
             if(gameData.state !== "waiting") {
                 document.getElementById('lobby-ui').classList.add('hidden');
                 document.getElementById('play-ui').classList.remove('hidden');
@@ -158,15 +124,10 @@
             const active = gameData.turn === `p${i}` && gameData.state !== "round_ended";
             sb.innerHTML += `<div class="player-slot ${active?'active-turn':''}"><b>${gameData[`p${i}_name`]}</b><br>Score: ${gameData[`p${i}_score`]||0}</div>`;
         }
-
         document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
         const st = document.getElementById('status-txt');
-        
-        if(gameData.state === "selecting") {
-            st.innerText = gameData[myRole+"_p"] !== undefined ? "⏳ Waiting for others..." : "💀 CHOOSE POISON!";
-        } else {
-            st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + gameData[gameData.turn+"_name"]+" is thinking...";
-        }
+        if(gameData.state === "selecting") st.innerText = gameData[myRole+"_p"] !== undefined ? "⏳ Waiting for others..." : "💀 CHOOSE POISON!";
+        else st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + (gameData[gameData.turn+"_name"] || "Player") + " is thinking...";
 
         const g = document.getElementById('grid');
         if(g.innerHTML === "") {
@@ -175,7 +136,6 @@
                 d.onclick=()=>handleMove(i); g.appendChild(d);
             }
         }
-
         for(let i=0; i<12; i++) {
             const el = document.getElementById("c-"+i);
             if(gameData.state === "selecting") el.classList.remove('red-hit', 'removed');
@@ -185,59 +145,45 @@
 
         const ov = document.getElementById('round-overlay');
         if(gameData.state === "round_ended") {
-            ov.classList.remove('hidden');
-            document.getElementById('r-winner').innerText = gameData.last_win + " Wins!";
+            ov.classList.remove('hidden'); document.getElementById('r-winner').innerText = gameData.last_win + " Wins!";
         } else if(gameData.state === "final_ended") {
-            ov.classList.remove('hidden');
-            document.getElementById('r-winner').innerHTML = "🏆 CHAMPION 🏆<br>" + gameData.champ;
+            ov.classList.remove('hidden'); document.getElementById('r-winner').innerHTML = "🏆 CHAMPION 🏆<br>" + gameData.champ;
             if(myRole === 'p1') document.getElementById('final-controls').classList.remove('hidden');
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        } else {
-            ov.classList.add('hidden');
-        }
+        } else { ov.classList.add('hidden'); }
     }
 
     window.handleMove = (i) => {
         const rRef = ref(db, 'rooms/'+selectedId);
         if(gameData.state === "selecting" && gameData[myRole+"_p"] === undefined) {
-            document.getElementById("c-"+i).classList.add('red-hit');
             update(rRef, {[myRole+"_p"]: i}).then(() => {
                 get(rRef).then(snap => {
                     let d = snap.val(), ready = 0;
-                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_p`] !== undefined) ready++;
-                    if(ready === d.playerCount) update(rRef, { state: "playing" });
+                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_p`] !== undefined && d[`p${k}_p`] !== null) ready++;
+                    if(ready === d.playerCount) update(rRef, { state: "playing", turn: "p"+d.startPlayer });
                 });
             });
         } else if(gameData.state === "playing" && gameData.turn === myRole) {
             if(gameData[`rem_${i}`]) return;
             let isP = false; for(let j=1; j<=gameData.playerCount; j++) if(i === gameData[`p${j}_p`]) isP = true;
-            
             if(isP) {
-                document.getElementById("c-"+i).classList.add('red-hit');
-                let curNum = parseInt(myRole.replace("p", ""));
-                let wIdx = curNum - 1 || gameData.playerCount;
-                let wName = gameData[`p${wIdx}_name`];
-                let nextRound = gameData.round + 1;
-                
+                let cur = parseInt(myRole.replace("p","")), wIdx = cur-1 || gameData.playerCount;
+                let wName = gameData[`p${wIdx}_name`], nR = gameData.round + 1;
                 update(rRef, { state:"round_ended", last_win: wName, [`p${wIdx}_score`]: (gameData[`p${wIdx}_score`]||0)+1 });
-                
                 setTimeout(() => {
-                    if(nextRound > 11) {
-                        let winName = "", maxS = -1;
-                        for(let k=1; k<=gameData.playerCount; k++) {
-                            if(gameData[`p${k}_score`] > maxS) { maxS = gameData[`p${k}_score`]; winName = gameData[`p${k}_name`]; }
-                        }
-                        update(rRef, { state: "final_ended", champ: winName });
+                    if(nR > 11) {
+                        let winN="", maxS=-1; for(let k=1; k<=gameData.playerCount; k++) if(gameData[`p${k}_score`]>maxS){ maxS=gameData[`p${k}_score`]; winN=gameData[`p${k}_name`]; }
+                        update(rRef, { state: "final_ended", champ: winN });
                     } else {
-                        let nextS = (gameData.startPlayer % gameData.playerCount) + 1;
-                        let reset = { state: "selecting", turn: "p"+nextS, startPlayer: nextS, round: nextRound };
-                        for(let k=1; k<=4; k++) reset[`p${k}_p`] = null;
-                        for(let k=0; k<12; k++) reset[`rem_${k}`] = null;
-                        update(rRef, reset);
+                        let nS = (gameData.startPlayer % gameData.playerCount) + 1;
+                        let res = { state:"selecting", turn: "p"+nS, startPlayer: nS, round: nR };
+                        for(let k=1; k<=4; k++) res[`p${k}_p`] = null;
+                        for(let k=0; k<12; k++) res[`rem_${k}`] = null;
+                        update(rRef, res);
                     }
                 }, 2500);
             } else {
-                let next = (parseInt(myRole.replace("p", "")) % gameData.playerCount) + 1;
+                let next = (parseInt(myRole.replace("p","")) % gameData.playerCount) + 1;
                 update(rRef, { turn: "p"+next, [`rem_${i}`]: true });
             }
         }
@@ -246,8 +192,8 @@
     window.hostStart = () => update(ref(db, 'rooms/'+selectedId), { state:"selecting" });
     window.hostReset = () => {
         let r = { state:"selecting", turn:"p1", round:1, startPlayer:1, champ:null };
-        for(let i=1; i<=4; i++) { r[`p${i}_score`] = 0; r[`p${i}_p`] = null; }
-        for(let i=0; i<12; i++) r[`rem_${i}`] = null;
+        for(let i=1; i<=4; i++) { r[`p${i}_score`]=0; r[`p${i}_p`]=null; }
+        for(let i=0; i<12; i++) r[`rem_${i}`]=null;
         update(ref(db, 'rooms/'+selectedId), r);
     };
     window.leaveRoom = () => { localStorage.clear(); location.reload(); };
