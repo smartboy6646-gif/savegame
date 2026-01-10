@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Poison & Save: 20min Auto-Close</title>
+    <title>Poison & Save: Perfect Stable v2</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --p: #780000; --bg: #fdf0d5; --acc: #003049; --g: #fcbf49; }
@@ -20,7 +20,7 @@
         .red-hit { background: #ff4d4d !important; border: none; transform: scale(0.9); }
         .removed { visibility: hidden; pointer-events: none; }
         .hidden { display: none !important; }
-        #timer-display { font-size: 10px; color: gray; text-align: center; margin-bottom: 5px; }
+        #timer-display { font-size: 11px; color: #d62828; text-align: center; margin-bottom: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -29,12 +29,12 @@
     <div id="hub-screen">
         <h2 style="text-align:center; color:var(--p);">🍫 Poison & Save</h2>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <input type="text" id="targetRoomId" placeholder="Room ID">
+        <input type="text" id="targetRoomId" placeholder="Room ID (Ex: 1234)">
         <button class="btn" style="background:var(--acc);" onclick="handleJoinOrCreate()">JOIN / CREATE ROOM</button>
     </div>
 
     <div id="game-section" class="hidden" style="height:100%; display:flex; flex-direction:column;">
-        <div id="timer-display">Room expires in: --:--</div>
+        <div id="timer-display">Loading timer...</div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div id="round-info" style="font-weight:bold; color:var(--p); background:var(--g); padding:2px 8px; border-radius:5px;">Round: 1/11</div>
             <button onclick="leaveRoom()" style="font-size:11px; border:none; background:#eee; padding:5px 10px; border-radius:5px;">LEAVE</button>
@@ -74,34 +74,47 @@
     const db = getDatabase(app);
 
     let myRole, myName, selectedId, gameData = {};
-    let expireInterval;
 
     window.onload = () => {
-        const n = localStorage.getItem('pName'), r = localStorage.getItem('sId'), rl = localStorage.getItem('mRl');
-        if(n) document.getElementById('playerName').value = n;
-        if(r && rl) { selectedId = r; myRole = rl; myName = n; enterRoom(); }
+        // Naam Loading Fix
+        const savedName = localStorage.getItem('pName');
+        if(savedName) {
+            document.getElementById('playerName').value = savedName;
+            myName = savedName;
+        }
+
+        const r = localStorage.getItem('sId'), rl = localStorage.getItem('mRl');
+        if(r && rl) { 
+            selectedId = r; myRole = rl; 
+            enterRoom(); 
+        }
     };
 
     window.handleJoinOrCreate = async () => {
         const id = document.getElementById('targetRoomId').value.trim().toLowerCase();
-        myName = document.getElementById('playerName').value.trim();
-        if(!id || !myName) return alert("Fill all fields!");
+        const inputName = document.getElementById('playerName').value.trim();
+        if(!id || !inputName) return alert("Naam ra ID halnus!");
+
+        // Naam Save logic
+        myName = inputName;
+        localStorage.setItem('pName', myName);
 
         const s = await get(ref(db, 'rooms/'+id));
         if(s.exists()) {
-            const c = s.val().playerCount + 1;
+            const data = s.val();
+            const c = data.playerCount + 1;
+            if(c > 4) return alert("Room full!");
             myRole = "p"+c;
             update(ref(db, 'rooms/'+id), { [`p${c}_name`]:myName, playerCount:c });
         } else {
             myRole = "p1";
-            // Naya room ma 'createdAt' time halne
             set(ref(db, 'rooms/'+id), { 
                 state:"waiting", playerCount:1, p1_name:myName, 
                 round:1, startPlayer:1, p1_score:0, p2_score:0, 
                 createdAt: Date.now() 
             });
         }
-        selectedId = id; localStorage.setItem('pName', myName); localStorage.setItem('sId', id); localStorage.setItem('mRl', myRole);
+        selectedId = id; localStorage.setItem('sId', id); localStorage.setItem('mRl', myRole);
         enterRoom();
     };
 
@@ -111,26 +124,31 @@
         
         onValue(ref(db, 'rooms/'+selectedId), (snap) => {
             gameData = snap.val();
-            if(!gameData) { 
-                alert("Room has expired or closed!");
-                return leaveRoom(); 
-            }
             
-            // 20 Minute Expiry Logic
+            // Room Expiry Handle: Yadi room delete vayo vane local state pani hataune
+            if(!gameData) { 
+                localStorage.removeItem('sId');
+                localStorage.removeItem('mRl');
+                location.reload(); 
+                return;
+            }
+
+            // Expiry Timer Display logic
             if(gameData.createdAt) {
-                const timeLeft = (gameData.createdAt + (20 * 60 * 1000)) - Date.now();
-                if(timeLeft <= 0) {
+                const diff = (gameData.createdAt + (20 * 60 * 1000)) - Date.now();
+                if(diff <= 0) {
                     if(myRole === 'p1') remove(ref(db, 'rooms/'+selectedId));
                     return;
                 }
-                const mins = Math.floor(timeLeft / 60000);
-                const secs = Math.floor((timeLeft % 60000) / 1000);
-                document.getElementById('timer-display').innerText = `Room expires in: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                const m = Math.floor(diff / 60000), s = Math.floor((diff % 60000) / 1000);
+                document.getElementById('timer-display').innerText = `Room ID: ${selectedId.toUpperCase()} (Expires in ${m}:${s<10?'0':''}${s})`;
             }
 
-            let phtml = ""; for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) phtml += "👤 "+gameData[`p${i}_name`]+"<br>";
+            let phtml = ""; for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) phtml += "👤 "+gameData[`p${i}_name`]+" ";
             document.getElementById('p-list').innerHTML = phtml;
+            
             if(myRole==='p1' && gameData.playerCount>=2 && gameData.state==='waiting') document.getElementById('start-btn').classList.remove('hidden');
+            
             if(gameData.state !== "waiting") {
                 document.getElementById('lobby-ui').classList.add('hidden');
                 document.getElementById('play-ui').classList.remove('hidden');
@@ -139,21 +157,18 @@
         });
     }
 
-    // [Baki syncUI, handleMove, hostStart logic haru agi kai version ko hunchha...]
-    // (Thau bachhauna maile main expiry logic mathi halidiye)
-
     function syncUI() {
         const sb = document.getElementById('scoreboard');
         sb.style.gridTemplateColumns = `repeat(${gameData.playerCount}, 1fr)`;
         sb.innerHTML = "";
         for(let i=1; i<=gameData.playerCount; i++) {
             const active = gameData.turn === `p${i}` && gameData.state !== "round_ended";
-            sb.innerHTML += `<div class="player-slot ${active?'active-turn':''}"><b>${gameData[`p${i}_name`]}</b><br>Score: ${gameData[`p${i}_score`]||0}</div>`;
+            sb.innerHTML += `<div class="player-slot ${active?'active-turn':''}"><b>${gameData[`p${i}_name`]}</b><br>${gameData[`p${i}_score`]||0}</div>`;
         }
         document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
         const st = document.getElementById('status-txt');
         if(gameData.state === "selecting") st.innerText = gameData[myRole+"_p"] !== undefined ? "⏳ Waiting..." : "💀 CHOOSE POISON!";
-        else st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + (gameData[gameData.turn+"_name"] || "Player") + " thinking...";
+        else st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + (gameData[gameData.turn+"_name"] || "Other") + " thinking...";
 
         const g = document.getElementById('grid');
         if(g.innerHTML === "") {
@@ -185,7 +200,7 @@
             update(rRef, {[myRole+"_p"]: i}).then(() => {
                 get(rRef).then(snap => {
                     let d = snap.val(), ready = 0;
-                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_p`] !== undefined) ready++;
+                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_p`] !== undefined && d[`p${k}_p`] !== null) ready++;
                     if(ready === d.playerCount) update(rRef, { state: "playing", turn: "p"+d.startPlayer });
                 });
             });
@@ -222,7 +237,7 @@
         for(let i=0; i<12; i++) r[`rem_${i}`]=null;
         update(ref(db, 'rooms/'+selectedId), r);
     };
-    window.leaveRoom = () => { localStorage.clear(); location.reload(); };
+    window.leaveRoom = () => { localStorage.removeItem('sId'); localStorage.removeItem('mRl'); location.reload(); };
 </script>
 </body>
 </html>
