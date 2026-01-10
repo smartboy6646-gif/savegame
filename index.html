@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Poison & Save: Perfect Stable</title>
+    <title>Poison & Save: 20min Auto-Close</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --p: #780000; --bg: #fdf0d5; --acc: #003049; --g: #fcbf49; }
@@ -20,6 +20,7 @@
         .red-hit { background: #ff4d4d !important; border: none; transform: scale(0.9); }
         .removed { visibility: hidden; pointer-events: none; }
         .hidden { display: none !important; }
+        #timer-display { font-size: 10px; color: gray; text-align: center; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -28,11 +29,12 @@
     <div id="hub-screen">
         <h2 style="text-align:center; color:var(--p);">🍫 Poison & Save</h2>
         <input type="text" id="playerName" placeholder="Tapaiko Naam">
-        <input type="text" id="targetRoomId" placeholder="Room ID (Ex: khelne)">
+        <input type="text" id="targetRoomId" placeholder="Room ID">
         <button class="btn" style="background:var(--acc);" onclick="handleJoinOrCreate()">JOIN / CREATE ROOM</button>
     </div>
 
     <div id="game-section" class="hidden" style="height:100%; display:flex; flex-direction:column;">
+        <div id="timer-display">Room expires in: --:--</div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div id="round-info" style="font-weight:bold; color:var(--p); background:var(--g); padding:2px 8px; border-radius:5px;">Round: 1/11</div>
             <button onclick="leaveRoom()" style="font-size:11px; border:none; background:#eee; padding:5px 10px; border-radius:5px;">LEAVE</button>
@@ -58,9 +60,8 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // Afno Firebase config yaha halnus
     const firebaseConfig = { apiKey: "AIzaSyDT6QJyFjZhjrCd-7d00IxFSlWqOBp2xY8",
   authDomain: "poison-and-save.firebaseapp.com",
   databaseURL: "https://poison-and-save-default-rtdb.firebaseio.com",
@@ -73,6 +74,7 @@
     const db = getDatabase(app);
 
     let myRole, myName, selectedId, gameData = {};
+    let expireInterval;
 
     window.onload = () => {
         const n = localStorage.getItem('pName'), r = localStorage.getItem('sId'), rl = localStorage.getItem('mRl');
@@ -83,17 +85,21 @@
     window.handleJoinOrCreate = async () => {
         const id = document.getElementById('targetRoomId').value.trim().toLowerCase();
         myName = document.getElementById('playerName').value.trim();
-        if(!id || !myName) return alert("Naam ra Room ID halnus!");
+        if(!id || !myName) return alert("Fill all fields!");
 
         const s = await get(ref(db, 'rooms/'+id));
         if(s.exists()) {
             const c = s.val().playerCount + 1;
-            if(c > 4) return alert("Room full cha!");
             myRole = "p"+c;
             update(ref(db, 'rooms/'+id), { [`p${c}_name`]:myName, playerCount:c });
         } else {
             myRole = "p1";
-            set(ref(db, 'rooms/'+id), { state:"waiting", playerCount:1, p1_name:myName, round:1, startPlayer:1, p1_score:0, p2_score:0, p3_score:0, p4_score:0 });
+            // Naya room ma 'createdAt' time halne
+            set(ref(db, 'rooms/'+id), { 
+                state:"waiting", playerCount:1, p1_name:myName, 
+                round:1, startPlayer:1, p1_score:0, p2_score:0, 
+                createdAt: Date.now() 
+            });
         }
         selectedId = id; localStorage.setItem('pName', myName); localStorage.setItem('sId', id); localStorage.setItem('mRl', myRole);
         enterRoom();
@@ -102,9 +108,26 @@
     function enterRoom() {
         document.getElementById('hub-screen').classList.add('hidden');
         document.getElementById('game-section').classList.remove('hidden');
+        
         onValue(ref(db, 'rooms/'+selectedId), (snap) => {
             gameData = snap.val();
-            if(!gameData) return leaveRoom();
+            if(!gameData) { 
+                alert("Room has expired or closed!");
+                return leaveRoom(); 
+            }
+            
+            // 20 Minute Expiry Logic
+            if(gameData.createdAt) {
+                const timeLeft = (gameData.createdAt + (20 * 60 * 1000)) - Date.now();
+                if(timeLeft <= 0) {
+                    if(myRole === 'p1') remove(ref(db, 'rooms/'+selectedId));
+                    return;
+                }
+                const mins = Math.floor(timeLeft / 60000);
+                const secs = Math.floor((timeLeft % 60000) / 1000);
+                document.getElementById('timer-display').innerText = `Room expires in: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+
             let phtml = ""; for(let i=1; i<=4; i++) if(gameData[`p${i}_name`]) phtml += "👤 "+gameData[`p${i}_name`]+"<br>";
             document.getElementById('p-list').innerHTML = phtml;
             if(myRole==='p1' && gameData.playerCount>=2 && gameData.state==='waiting') document.getElementById('start-btn').classList.remove('hidden');
@@ -116,6 +139,9 @@
         });
     }
 
+    // [Baki syncUI, handleMove, hostStart logic haru agi kai version ko hunchha...]
+    // (Thau bachhauna maile main expiry logic mathi halidiye)
+
     function syncUI() {
         const sb = document.getElementById('scoreboard');
         sb.style.gridTemplateColumns = `repeat(${gameData.playerCount}, 1fr)`;
@@ -126,8 +152,8 @@
         }
         document.getElementById('round-info').innerText = `Round: ${gameData.round}/11`;
         const st = document.getElementById('status-txt');
-        if(gameData.state === "selecting") st.innerText = gameData[myRole+"_p"] !== undefined ? "⏳ Waiting for others..." : "💀 CHOOSE POISON!";
-        else st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + (gameData[gameData.turn+"_name"] || "Player") + " is thinking...";
+        if(gameData.state === "selecting") st.innerText = gameData[myRole+"_p"] !== undefined ? "⏳ Waiting..." : "💀 CHOOSE POISON!";
+        else st.innerText = gameData.turn === myRole ? "👉 YOUR TURN!" : "🔇 " + (gameData[gameData.turn+"_name"] || "Player") + " thinking...";
 
         const g = document.getElementById('grid');
         if(g.innerHTML === "") {
@@ -159,7 +185,7 @@
             update(rRef, {[myRole+"_p"]: i}).then(() => {
                 get(rRef).then(snap => {
                     let d = snap.val(), ready = 0;
-                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_p`] !== undefined && d[`p${k}_p`] !== null) ready++;
+                    for(let k=1; k<=d.playerCount; k++) if(d[`p${k}_p`] !== undefined) ready++;
                     if(ready === d.playerCount) update(rRef, { state: "playing", turn: "p"+d.startPlayer });
                 });
             });
@@ -191,7 +217,7 @@
 
     window.hostStart = () => update(ref(db, 'rooms/'+selectedId), { state:"selecting" });
     window.hostReset = () => {
-        let r = { state:"selecting", turn:"p1", round:1, startPlayer:1, champ:null };
+        let r = { state:"selecting", turn:"p1", round:1, startPlayer:1, champ:null, createdAt: Date.now() };
         for(let i=1; i<=4; i++) { r[`p${i}_score`]=0; r[`p${i}_p`]=null; }
         for(let i=0; i<12; i++) r[`rem_${i}`]=null;
         update(ref(db, 'rooms/'+selectedId), r);
